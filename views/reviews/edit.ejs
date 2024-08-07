@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Review</title>
+</head>
+<body>
+    <h1>Edit Review</h1>
+    <form action="/reviews/<%= review._id %>?_method=PUT" method="POST">
+        <div>
+            <label for="book">Book:</label>
+            <select id="book" name="book" required>
+                <% books.forEach(book => { %>
+                    <option value="<%= book._id %>" <%= review.book._id.toString() === book._id.toString() ? 'selected' : '' %>><%= book.name %></option>
+                <% }); %>
+            </select>
+        </div>
+        <div>
+            <label for="review">Review:</label>
+            <textarea id="review" name="review" required><%= review.review %></textarea>
+        </div>
+        <div>
+            <label for="score">Score:</label>
+            <input type="number" id="score" name="score" min="1" max="5" value="<%= review.score %>" required>
+        </div>
+        <button type="submit">Update Review</button>
+    </form>
+    <a href="/reviews/<%= review._id %>">Cancel</a>
+</body>
+</html>

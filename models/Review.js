@@ -7,7 +7,7 @@ const ReviewSchema = new mongoose.Schema(
       ref: "Book",
       required: true,
     },
-    reviewText: {
+    review: {
       type: String,
       required: true,
       trim: true,
@@ -18,7 +18,7 @@ const ReviewSchema = new mongoose.Schema(
       min: 1,
       max: 5,
     },
-    upVotes: {
+    numberOfUpvotes: {
       type: Number,
       default: 0,
     },

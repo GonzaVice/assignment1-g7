@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reviews</title>
+  </head>
+  <body>
+    <h1>Reviews</h1>
+    <a href="/reviews/new">New Review</a>
+    <% if (reviews.length > 0) { %>
+    <ul>
+      <% reviews.forEach(review => { %>
+      <li>
+        <a href="/reviews/<%= review._id %>">
+          Review for "<%= review.book.name %>" - Score: <%= review.score %>
+        </a>
+      </li>
+      <% }); %>
+    </ul>
+    <% } else { %>
+    <p>No reviews found.</p>
+    <% } %>
+    <br />
+    <a href="/">Go back to Home Menu</a>
+  </body>
+</html>

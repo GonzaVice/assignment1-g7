@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>New Review</title>
+  </head>
+  <body>
+    <h1>New Review</h1>
+    <form action="/reviews" method="POST">
+      <div>
+        <label for="book">Book:</label>
+        <select id="book" name="book" required>
+          <% books.forEach(book => { %>
+          <option value="<%= book._id %>"><%= book.name %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div>
+        <label for="review">Review:</label>
+        <textarea id="review" name="review" required></textarea>
+      </div>
+      <div>
+        <label for="score">Score:</label>
+        <input type="number" id="score" name="score" min="1" max="5" required />
+      </div>
+      <button type="submit">Create Review</button>
+    </form>
+    <a href="/reviews">Cancel</a>
+  </body>
+</html>
