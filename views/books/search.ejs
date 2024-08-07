@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Búsqueda de Libros</title>
+  </head>
+  <body>
+    <h1>Búsqueda de Libros</h1>
+
+    <form action="/books/search" method="GET">
+      <input
+        type="text"
+        name="query"
+        value="<%= query %>"
+        placeholder="Buscar libros..."
+      />
+      <button type="submit">Buscar</button>
+    </form>
+
+    <% if (books.length > 0) { %>
+    <ul>
+      <% books.forEach(book => { %>
+      <li>
+        <h3><%= book.name %></h3>
+        <p>Autor: <%= book.author.name %></p>
+        <p><%= book.summary %></p>
+      </li>
+      <% }); %>
+    </ul>
+
+    <!-- Paginación -->
+    <div class="pagination">
+      <% if (currentPage > 1) { %>
+      <a href="/books/search?query=<%= query %>&page=<%= currentPage - 1 %>"
+        >Anterior</a
+      >
+      <% } %> <% for (let i = 1; i <= totalPages; i++) { %> <% if (i ===
+      currentPage) { %>
+      <span><%= i %></span>
+      <% } else { %>
+      <a href="/books/search?query=<%= query %>&page=<%= i %>"><%= i %></a>
+      <% } %> <% } %> <% if (currentPage < totalPages) { %>
+      <a href="/books/search?query=<%= query %>&page=<%= currentPage + 1 %>"
+        >Siguiente</a
+      >
+      <% } %>
+    </div>
+    <% } else if (query) { %>
+    <p>No se encontraron resultados para "<%= query %>"</p>
+    <% } %>
+  </body>
+</html>

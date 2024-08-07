@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Top 10 Rated Books</title>
+  </head>
+  <body>
+    <h1>Top 10 Rated Books of All Time</h1>
+    <table>
+      <thead>
+        <tr>
+          <th>Rank</th>
+          <th>Title</th>
+          <th>Author</th>
+          <th>Average Score</th>
+          <th>Highest Rated Review</th>
+          <th>Lowest Rated Review</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% topBooks.forEach((book, index) => { %>
+        <tr>
+          <td><%= index + 1 %></td>
+          <td><%= book.name %></td>
+          <td><%= book.author.name %></td>
+          <td><%= book.averageScore.toFixed(2) %></td>
+          <td>
+            <% if (book.highestRatedReview) { %>
+            <p>Score: <%= book.highestRatedReview.score %></p>
+            <p>Review: <%= book.highestRatedReview.review %></p>
+            <p>Upvotes: <%= book.highestRatedReview.numberOfUpvotes %></p>
+            <% } else { %>
+            <p>No review available</p>
+            <% } %>
+          </td>
+          <td>
+            <% if (book.lowestRatedReview) { %>
+            <p>Score: <%= book.lowestRatedReview.score %></p>
+            <p>Review: <%= book.lowestRatedReview.review %></p>
+            <p>Upvotes: <%= book.lowestRatedReview.numberOfUpvotes %></p>
+            <% } else { %>
+            <p>No review available</p>
+            <% } %>
+          </td>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+    <a href="/books">Back to All Books</a>
+    <br />
+    <a href="/">Go back to Home Menu</a>
+  </body>
+</html>
