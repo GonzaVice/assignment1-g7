@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Author Statistics</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdn.datatables.net/1.10.24/css/jquery.dataTables.min.css"
+    />
+  </head>
+  <body>
+    <h1>Author Statistics</h1>
+    <table id="authorStatsTable">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Number of Books</th>
+          <th>Average Score</th>
+          <th>Total Sales</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% authorStats.forEach(author => { %>
+        <tr>
+          <td><%= author.name %></td>
+          <td><%= author.numBooks %></td>
+          <td><%= author.avgScore %></td>
+          <td><%= author.totalSales %></td>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+
+    <script>
+      $(document).ready(function () {
+        $("#authorStatsTable").DataTable({
+          order: [[3, "desc"]], // Sort by total sales by default
+          pageLength: 10, // Show 10 entries per page
+          lengthMenu: [
+            [10, 25, 50, -1],
+            [10, 25, 50, "All"],
+          ],
+        });
+      });
+    </script>
+  </body>
+</html>

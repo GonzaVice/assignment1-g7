@@ -1,6 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const Author = require("../models/Author");
+const Book = require("../models/Book");
+const Review = require("../models/Review");
+const Sale = require("../models/Sale");
 
 // GET all authors
 router.get("/", async (req, res) => {
@@ -15,6 +18,43 @@ router.get("/", async (req, res) => {
 // GET form to create a new author
 router.get("/new", (req, res) => {
   res.render("authors/new");
+});
+
+// GET authors statistics
+router.get("/stats", async (req, res) => {
+  try {
+    const authors = await Author.find();
+    const authorStats = await Promise.all(
+      authors.map(async (author) => {
+        const books = await Book.find({ author: author._id });
+        const bookIds = books.map((book) => book._id);
+
+        const numBooks = books.length;
+
+        const reviews = await Review.find({ book: { $in: bookIds } });
+        const avgScore =
+          reviews.length > 0
+            ? reviews.reduce((sum, review) => sum + review.score, 0) /
+              reviews.length
+            : 0;
+
+        const sales = await Sale.find({ book: { $in: bookIds } });
+        const totalSales = sales.reduce((sum, sale) => sum + sale.sales, 0);
+
+        return {
+          _id: author._id,
+          name: author.name,
+          numBooks,
+          avgScore: avgScore.toFixed(2),
+          totalSales,
+        };
+      })
+    );
+
+    res.render("authors/stats", { authorStats });
+  } catch (err) {
+    res.status(500).render("error", { message: err.message });
+  }
 });
 
 // POST create a new author
