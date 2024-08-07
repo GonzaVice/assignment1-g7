@@ -6,18 +6,18 @@ const Author = require("../models/Author");
 router.get("/", async (req, res) => {
   try {
     const authors = await Author.find();
-    res.json(authors);
+    res.render("authors/index", { authors });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).render("error", { message: err.message });
   }
 });
 
-// GET one author
-router.get("/:id", getAuthor, (req, res) => {
-  res.json(res.author);
+// GET form to create a new author
+router.get("/new", (req, res) => {
+  res.render("authors/new");
 });
 
-// CREATE an author
+// POST create a new author
 router.post("/", async (req, res) => {
   const author = new Author({
     name: req.body.name,
@@ -28,13 +28,23 @@ router.post("/", async (req, res) => {
 
   try {
     const newAuthor = await author.save();
-    res.status(201).json(newAuthor);
+    res.redirect(`/authors/${newAuthor._id}`);
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    res.render("authors/new", { author: author, errorMessage: err.message });
   }
 });
 
-// UPDATE an author
+// GET one author
+router.get("/:id", getAuthor, (req, res) => {
+  res.render("authors/show", { author: res.author });
+});
+
+// GET form to edit an author
+router.get("/:id/edit", getAuthor, (req, res) => {
+  res.render("authors/edit", { author: res.author });
+});
+
+// PATCH update an author
 router.patch("/:id", getAuthor, async (req, res) => {
   if (req.body.name != null) {
     res.author.name = req.body.name;
@@ -51,9 +61,12 @@ router.patch("/:id", getAuthor, async (req, res) => {
 
   try {
     const updatedAuthor = await res.author.save();
-    res.json(updatedAuthor);
+    res.redirect(`/authors/${updatedAuthor._id}`);
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    res.render("authors/edit", {
+      author: res.author,
+      errorMessage: err.message,
+    });
   }
 });
 
@@ -61,9 +74,9 @@ router.patch("/:id", getAuthor, async (req, res) => {
 router.delete("/:id", getAuthor, async (req, res) => {
   try {
     await res.author.remove();
-    res.json({ message: "Author deleted" });
+    res.redirect("/authors");
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).render("error", { message: err.message });
   }
 });
 
@@ -73,10 +86,10 @@ async function getAuthor(req, res, next) {
   try {
     author = await Author.findById(req.params.id);
     if (author == null) {
-      return res.status(404).json({ message: "Cannot find author" });
+      return res.status(404).render("error", { message: "Cannot find author" });
     }
   } catch (err) {
-    return res.status(500).json({ message: err.message });
+    return res.status(500).render("error", { message: err.message });
   }
 
   res.author = author;

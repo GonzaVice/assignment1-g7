@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Authors List</title>
+  </head>
+  <body>
+    <h1>Authors</h1>
+    <a href="/authors/new">Add New Author</a>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Country</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% authors.forEach(author => { %>
+        <tr>
+          <td><%= author.name %></td>
+          <td><%= author.countryOfOrigin %></td>
+          <td>
+            <a href="/authors/<%= author._id %>">View</a>
+            <a href="/authors/<%= author._id %>/edit">Edit</a>
+            <form
+              action="/authors/<%= author._id %>?_method=DELETE"
+              method="POST"
+              style="display: inline"
+            >
+              <button type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </body>
+</html>

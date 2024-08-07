@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Add New Author</title>
+  </head>
+  <body>
+    <h1>Add New Author</h1>
+    <form action="/authors" method="POST">
+      <div>
+        <label for="name">Name:</label>
+        <input type="text" id="name" name="name" required />
+      </div>
+      <div>
+        <label for="dateOfBirth">Date of Birth:</label>
+        <input type="date" id="dateOfBirth" name="dateOfBirth" required />
+      </div>
+      <div>
+        <label for="countryOfOrigin">Country of Origin:</label>
+        <input
+          type="text"
+          id="countryOfOrigin"
+          name="countryOfOrigin"
+          required
+        />
+      </div>
+      <div>
+        <label for="description">Description:</label>
+        <textarea id="description" name="description" required></textarea>
+      </div>
+      <button type="submit">Create Author</button>
+    </form>
+    <a href="/authors">Back to Authors List</a>
+  </body>
+</html>
