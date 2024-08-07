@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>New Sale</title>
+  </head>
+  <body>
+    <h1>New Sale</h1>
+    <form action="/sales" method="POST">
+      <div>
+        <label for="book">Book:</label>
+        <select id="book" name="book" required>
+          <% books.forEach(book => { %>
+          <option value="<%= book._id %>"><%= book.name %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div>
+        <label for="year">Year:</label>
+        <input
+          type="number"
+          id="year"
+          name="year"
+          required
+          min="1900"
+          max="<%= new Date().getFullYear() %>"
+        />
+      </div>
+      <div>
+        <label for="sales">Sales:</label>
+        <input type="number" id="sales" name="sales" required min="0" />
+      </div>
+      <button type="submit">Create Sale</button>
+    </form>
+    <a href="/sales">Cancel</a>
+  </body>
+</html>

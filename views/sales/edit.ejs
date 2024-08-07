@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Sale</title>
+</head>
+<body>
+    <h1>Edit Sale</h1>
+    <form action="/sales/<%= sale._id %>?_method=PUT" method="POST">
+        <div>
+            <label for="book">Book:</label>
+            <select id="book" name="book" required>
+                <% books.forEach(book => { %>
+                    <option value="<%= book._id %>" <%= sale.book._id.toString() === book._id.toString() ? 'selected' : '' %>><%= book.name %></option>
+                <% }); %>
+            </select>
+        </div>
+        <div>
+            <label for="year">Year:</label>
+            <input type="number" id="year" name="year" value="<%= sale.year %>" required min="1900" max="<%= new Date().getFullYear() %>">
+        </div>
+        <div>
+            <label for="sales">Sales:</label>
+            <input type="number" id="sales" name="sales" value="<%= sale.sales %>" required min="0">
+        </div>
+        <button type="submit">Update Sale</button>
+    </form>
+    <a href="/sales/<%= sale._id %>">Cancel</a>
+</body>
+</html>
