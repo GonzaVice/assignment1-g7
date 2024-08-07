@@ -1,5 +1,5 @@
 const express = require("express");
-const methodOverride = require("method-override"); //Es para hacer PUT y DELETE
+const methodOverride = require("method-override"); //Es para hacer PUT del CRUD
 const path = require("path");
 const connectDB = require("./config/db");
 require("dotenv").config();
@@ -20,7 +20,7 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use(methodOverride("_method"));
 
 // NUEVO: Set view engine
-app.set("view engine", "ejs"); //Ese es para las vistas estilo HTML para Express
+app.set("view engine", "ejs"); // Ese es para las vistas estilo HTML para Express
 app.set("views", path.join(__dirname, "views"));
 
 // Routes

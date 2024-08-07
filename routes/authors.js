@@ -73,10 +73,11 @@ router.put("/:id", getAuthor, async (req, res) => {
 // DELETE an author
 router.delete("/:id", getAuthor, async (req, res) => {
   try {
-    await res.author.remove();
+    await Author.deleteOne({ _id: res.author._id });
     res.redirect("/authors");
   } catch (err) {
-    res.status(500).render("error", { message: err.message });
+    console.error(err);
+    res.status(500).render("error", { message: "Error deleting the author" });
   }
 });
 
@@ -89,7 +90,10 @@ async function getAuthor(req, res, next) {
       return res.status(404).render("error", { message: "Cannot find author" });
     }
   } catch (err) {
-    return res.status(500).render("error", { message: err.message });
+    console.error(err);
+    return res
+      .status(500)
+      .render("error", { message: "Error retrieving the author" });
   }
 
   res.author = author;
