@@ -2,9 +2,9 @@
 
 ## Notas:
 
-### Descargar express, mongoose y dotenv
+### Descargar express, mongoose, dotenv y ejs
 
-`npm i express mongoose dotenv`
+`npm i express mongoose dotenv ejs`
 
 ### Crear .env para las credenciales del MongoDB
 
