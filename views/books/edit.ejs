@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Book</title>
+</head>
+<body>
+    <h1>Edit Book</h1>
+    <form action="/books/<%= book._id %>?_method=PUT" method="POST">
+        <div>
+            <label for="name">Name:</label>
+            <input type="text" id="name" name="name" value="<%= book.name %>" required>
+        </div>
+        <div>
+            <label for="summary">Summary:</label>
+            <textarea id="summary" name="summary" required><%= book.summary %></textarea>
+        </div>
+        <div>
+            <label for="publicationDate">Date of Publication:</label>
+            <input type="date" id="publicationDate" name="publicationDate" value="<%= book.publicationDate.toISOString().split('T')[0] %>" required>
+        </div>
+        <div>
+            <label for="totalSales">Number of Sales:</label>
+            <input type="number" id="totalSales" name="totalSales" value="<%= book.totalSales %>" required>
+        </div>
+        <div>
+            <label for="author">Author:</label>
+            <select id="author" name="author" required>
+                <% authors.forEach(author => { %>
+                    <option value="<%= author._id %>" <%= book.author._id.toString() === author._id.toString() ? 'selected' : '' %>><%= author.name %></option>
+                <% }); %>
+            </select>
+        </div>
+        <button type="submit">Update Book</button>
+    </form>
+    <a href="/books/<%= book._id %>">Cancel</a>
+</body>
+</html>

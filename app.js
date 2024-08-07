@@ -1,5 +1,5 @@
 const express = require("express");
-const methodOverride = require("method-override"); //Es para hacer PUT del CRUD
+const methodOverride = require("method-override"); //Es para hacer PUT y DELETE del CRUD
 const path = require("path");
 const connectDB = require("./config/db");
 require("dotenv").config();
@@ -32,7 +32,7 @@ app.use("/sales", require("./routes/sales"));
 const PORT = process.env.PORT || 3000;
 
 app.get("/", (req, res) => {
-  res.send("Hello World!");
+  res.render("home");
 });
 
 app.listen(PORT, () => {

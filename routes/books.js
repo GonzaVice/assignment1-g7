@@ -1,73 +1,89 @@
 const express = require("express");
 const router = express.Router();
 const Book = require("../models/Book");
+const Author = require("../models/Author");
 
 // GET all books
 router.get("/", async (req, res) => {
   try {
     const books = await Book.find().populate("author");
-    res.json(books);
+    res.render("books/index", { books });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).render("error", { message: err.message });
   }
 });
 
-// GET one book
-router.get("/:id", getBook, (req, res) => {
-  res.json(res.book);
+// GET form to create a new book
+router.get("/new", async (req, res) => {
+  const authors = await Author.find();
+  res.render("books/new", { authors });
 });
 
-// CREATE a book
+// POST create a new book
 router.post("/", async (req, res) => {
   const book = new Book({
     name: req.body.name,
     summary: req.body.summary,
     publicationDate: req.body.publicationDate,
     totalSales: req.body.totalSales,
-    author: req.body.authorId,
+    author: req.body.author,
   });
 
   try {
     const newBook = await book.save();
-    res.status(201).json(newBook);
+    res.redirect(`/books/${newBook._id}`);
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    const authors = await Author.find();
+    res.render("books/new", {
+      book: book,
+      authors: authors,
+      errorMessage: err.message,
+    });
   }
 });
 
-// UPDATE a book
-router.patch("/:id", getBook, async (req, res) => {
-  if (req.body.name != null) {
-    res.book.name = req.body.name;
-  }
-  if (req.body.summary != null) {
-    res.book.summary = req.body.summary;
-  }
-  if (req.body.publicationDate != null) {
-    res.book.publicationDate = req.body.publicationDate;
-  }
-  if (req.body.totalSales != null) {
-    res.book.totalSales = req.body.totalSales;
-  }
-  if (req.body.authorId != null) {
-    res.book.author = req.body.authorId;
-  }
+// GET one book
+router.get("/:id", getBook, (req, res) => {
+  res.render("books/show", { book: res.book });
+});
+
+// GET form to edit a book
+router.get("/:id/edit", getBook, async (req, res) => {
+  const authors = await Author.find();
+  res.render("books/edit", { book: res.book, authors: authors });
+});
+
+// PUT update a book
+router.put("/:id", async (req, res) => {
+  const updates = {
+    name: req.body.name,
+    summary: req.body.summary,
+    publicationDate: req.body.publicationDate,
+    totalSales: req.body.totalSales,
+    author: req.body.author,
+  };
 
   try {
-    const updatedBook = await res.book.save();
-    res.json(updatedBook);
+    await Book.updateOne({ _id: req.params.id }, updates);
+    res.redirect(`/books/${req.params.id}`);
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    const authors = await Author.find();
+    res.render("books/edit", {
+      book: { _id: req.params.id, ...updates },
+      authors: authors,
+      errorMessage: err.message,
+    });
   }
 });
 
 // DELETE a book
 router.delete("/:id", getBook, async (req, res) => {
   try {
-    await res.book.remove();
-    res.json({ message: "Book deleted" });
+    await Book.deleteOne({ _id: res.book._id });
+    res.redirect("/books");
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error(err);
+    res.status(500).render("error", { message: "Error deleting the book" });
   }
 });
 
@@ -77,10 +93,13 @@ async function getBook(req, res, next) {
   try {
     book = await Book.findById(req.params.id).populate("author");
     if (book == null) {
-      return res.status(404).json({ message: "Cannot find book" });
+      return res.status(404).render("error", { message: "Cannot find book" });
     }
   } catch (err) {
-    return res.status(500).json({ message: err.message });
+    console.error(err);
+    return res
+      .status(500)
+      .render("error", { message: "Error retrieving the book" });
   }
 
   res.book = book;

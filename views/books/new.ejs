@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>New Book</title>
+  </head>
+  <body>
+    <h1>New Book</h1>
+    <form action="/books" method="POST">
+      <div>
+        <label for="name">Name:</label>
+        <input type="text" id="name" name="name" required />
+      </div>
+      <div>
+        <label for="summary">Summary:</label>
+        <textarea id="summary" name="summary" required></textarea>
+      </div>
+      <div>
+        <label for="publicationDate">Date of Publication:</label>
+        <input
+          type="date"
+          id="publicationDate"
+          name="publicationDate"
+          required
+        />
+      </div>
+      <div>
+        <label for="totalSales">Number of Sales:</label>
+        <input type="number" id="totalSales" name="totalSales" required />
+      </div>
+      <div>
+        <label for="author">Author:</label>
+        <select id="author" name="author" required>
+          <% authors.forEach(author => { %>
+          <option value="<%= author._id %>"><%= author.name %></option>
+          <% }); %>
+        </select>
+      </div>
+      <button type="submit">Create Book</button>
+    </form>
+    <a href="/books">Cancel</a>
+  </body>
+</html>

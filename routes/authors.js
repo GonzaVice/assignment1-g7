@@ -44,7 +44,7 @@ router.get("/:id/edit", getAuthor, (req, res) => {
   res.render("authors/edit", { author: res.author });
 });
 
-// PUT  update an author
+// PUT update an author
 router.put("/:id", async (req, res) => {
   const updates = {
     name: req.body.name,

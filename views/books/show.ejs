@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title><%= book.name %></title>
+  </head>
+  <body>
+    <h1><%= book.name %></h1>
+    <p>
+      By: <a href="/authors/<%= book.author._id %>"><%= book.author.name %></a>
+    </p>
+    <p>Date of Publication: <%= book.publicationDate.toDateString() %></p>
+    <p>Number of Sales: <%= book.totalSales %></p>
+    <h2>Summary</h2>
+    <p><%= book.summary %></p>
+    <a href="/books/<%= book._id %>/edit">Edit</a>
+    <form
+      action="/books/<%= book._id %>?_method=DELETE"
+      method="POST"
+      style="display: inline"
+    >
+      <button type="submit">Delete</button>
+    </form>
+    <a href="/books">Back to all books</a>
+  </body>
+</html>
