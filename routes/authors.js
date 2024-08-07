@@ -44,8 +44,8 @@ router.get("/:id/edit", getAuthor, (req, res) => {
   res.render("authors/edit", { author: res.author });
 });
 
-// PATCH update an author
-router.patch("/:id", getAuthor, async (req, res) => {
+// PUT  update an author
+router.put("/:id", getAuthor, async (req, res) => {
   if (req.body.name != null) {
     res.author.name = req.body.name;
   }

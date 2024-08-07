@@ -1,4 +1,5 @@
 const express = require("express");
+const methodOverride = require("method-override"); //Es para hacer PUT y DELETE
 const path = require("path");
 const connectDB = require("./config/db");
 require("dotenv").config();
@@ -10,14 +11,17 @@ const app = express();
 // Connect to MongoDB
 connectDB();
 
-// NUEVO: Set view engine
-app.set("view engine", "ejs");
-app.set("views", path.join(__dirname, "views"));
-
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
+
+// Configure method-override
+app.use(methodOverride("_method"));
+
+// NUEVO: Set view engine
+app.set("view engine", "ejs"); //Ese es para las vistas estilo HTML para Express
+app.set("views", path.join(__dirname, "views"));
 
 // Routes
 app.use("/authors", require("./routes/authors"));

@@ -2,9 +2,9 @@
 
 ## Notas:
 
-### Descargar express, mongoose, dotenv y ejs
+### Descargar express, mongoose, dotenv, ejs y method-override
 
-`npm i express mongoose dotenv ejs`
+`npm i express mongoose dotenv ejs method-override`
 
 ### Crear .env para las credenciales del MongoDB
 
