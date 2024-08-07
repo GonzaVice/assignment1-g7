@@ -45,26 +45,20 @@ router.get("/:id/edit", getAuthor, (req, res) => {
 });
 
 // PUT  update an author
-router.put("/:id", getAuthor, async (req, res) => {
-  if (req.body.name != null) {
-    res.author.name = req.body.name;
-  }
-  if (req.body.dateOfBirth != null) {
-    res.author.dateOfBirth = req.body.dateOfBirth;
-  }
-  if (req.body.countryOfOrigin != null) {
-    res.author.countryOfOrigin = req.body.countryOfOrigin;
-  }
-  if (req.body.description != null) {
-    res.author.description = req.body.description;
-  }
+router.put("/:id", async (req, res) => {
+  const updates = {
+    name: req.body.name,
+    dateOfBirth: req.body.dateOfBirth,
+    countryOfOrigin: req.body.countryOfOrigin,
+    description: req.body.description,
+  };
 
   try {
-    const updatedAuthor = await res.author.save();
-    res.redirect(`/authors/${updatedAuthor._id}`);
+    await Author.updateOne({ _id: req.params.id }, updates);
+    res.redirect(`/authors/${req.params.id}`);
   } catch (err) {
     res.render("authors/edit", {
-      author: res.author,
+      author: { _id: req.params.id, ...updates },
       errorMessage: err.message,
     });
   }
