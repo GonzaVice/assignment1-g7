@@ -1,0 +1,6 @@
+FROM mongo:latest
+
+WORKDIR /data/db
+
+EXPOSE 27017
+

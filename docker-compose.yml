@@ -1,0 +1,18 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mongo
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017/tu_base_de_datos
+
+  mongo:
+    build:
+      context: .
+      dockerfile: Dockerfile.mongo
+    ports:
+      - "27017:27017"

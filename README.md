@@ -1,6 +1,6 @@
 # Software Architecture Group 7 Assignment 1
 
-## How to launch the Web App:
+## How to launch the Web App (locally):
 
 ### 1. You have to need those installed in your PC:
 
@@ -43,3 +43,28 @@ node app.js
 ```
 
 ### 7. Access the web app with [localhost:3000](http://localhost:3000/)
+
+## How to launch the Web App (Docker):
+
+### 1. Clone the repository
+
+```
+git init
+git clone https://github.com/GonzaVice/assignment1-g7.git
+```
+
+### 2. Run docker containers
+
+Build containers:
+
+```
+docker-compose build
+```
+
+Run containers:
+
+```
+docker-compose up
+```
+
+### 3. Access the web app with [localhost:3000](http://localhost:3000/)
