@@ -8,7 +8,7 @@ services:
     depends_on:
       - mongo
     environment:
-      - MONGODB_URI=mongodb://mongo:27017/tu_base_de_datos
+      - MONGODB_URI=mongodb://mongo:27017/libros_criticas_db
 
   mongo:
     build:
@@ -16,3 +16,12 @@ services:
       dockerfile: Dockerfile.mongo
     ports:
       - "27017:27017"
+
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - app
