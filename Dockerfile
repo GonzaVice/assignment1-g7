@@ -8,6 +8,10 @@ RUN npm install
 
 COPY . .
 
+RUN useradd -m myuser
+
+USER myuser
+
 EXPOSE 3000
 
 CMD ["node", "app.js"]
