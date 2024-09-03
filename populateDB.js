@@ -1,7 +1,6 @@
 const mongoose = require("mongoose");
 const { faker } = require("@faker-js/faker");
 const { Schema } = mongoose;
-const connectDB = require("./config/db");
 
 // Exportar modelos
 const Author = require("./models/Author");
@@ -9,8 +8,24 @@ const Book = require("./models/Book");
 const Review = require("./models/Review");
 const Sale = require("./models/Sale");
 
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/tu_base_de_datos";
+
+const connectDB = async () => {
+  try {
+    await mongoose.connect(MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    console.log("MongoDB connected");
+  } catch (err) {
+    console.error(err.message);
+    process.exit(1);
+  }
+};
+
 // Connect to MongoDB
 connectDB();
+
 
 // Función para crear datos de prueba
 const crearDatosDePrueba = async () => {

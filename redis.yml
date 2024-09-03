@@ -11,6 +11,8 @@ services:
     environment:
       - MONGODB_URI=mongodb://mongo:27017/tu_base_de_datos
       - REDIS_URL=redis://redis:6379
+    command: >
+      sh -c "node populateDB.js && node app.js"
 
   mongo:
     build:

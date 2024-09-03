@@ -1,51 +1,35 @@
 const express = require("express");
-const redis = require('redis');
-const methodOverride = require("method-override"); //Es para hacer PUT y DELETE del CRUD
+const methodOverride = require("method-override");
 const path = require("path");
 const connectDB = require("./config/db");
+const redis = require("redis");
 require("dotenv").config();
 
 global.__basedir = __dirname;
 
 const app = express();
 
-// Intenta conectarte a Redis
-let redisClient;
-try {
-    redisClient = redis.createClient({
-        url: 'redis://localhost:6379', // Cambia la URL si usas otro host/puerto
-    });
-
-    redisClient.on('error', (err) => {
-        console.error('Error connecting to Redis:', err);
-        redisClient = null; // Desactiva Redis si no se puede conectar
-    });
-
-    redisClient.connect();
-} catch (error) {
-    console.error('Redis not available:', error);
-    redisClient = null; // Redis no está disponible
-}
-
-// Middleware de ejemplo que usa Redis (si está disponible)
-app.use(async (req, res, next) => {
-    if (redisClient) {
-        try {
-            // Intenta acceder a Redis
-            await redisClient.set('key', 'value');
-            const value = await redisClient.get('key');
-            console.log('Redis value:', value);
-        } catch (err) {
-            console.error('Error using Redis:', err);
-        }
-    } else {
-        console.log('Skipping Redis since it is not available.');
-    }
-    next();
-});
-
 // Connect to MongoDB
 connectDB();
+
+// Configuración de Redis
+let redisClient;
+
+(async () => {
+  redisClient = redis.createClient({
+    url: process.env.REDIS_URL || "redis://localhost:6379"
+  });
+
+  redisClient.on('error', (err) => {
+    console.error("No se pudo conectar a Redis. Continuando sin Redis...", err);
+    redisClient = null; // Si hay un error, no se usará Redis
+  });
+
+  await redisClient.connect().catch((err) => {
+    console.error("Error al conectar a Redis:", err);
+    redisClient = null;
+  });
+})();
 
 // Middleware
 app.use(express.json());
@@ -56,7 +40,7 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use(methodOverride("_method"));
 
 // NUEVO: Set view engine
-app.set("view engine", "ejs"); // Ese es para las vistas estilo HTML para Express
+app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 
 // Routes
@@ -69,6 +53,32 @@ const PORT = process.env.PORT || 3000;
 
 app.get("/", (req, res) => {
   res.render("home");
+});
+
+// Ejemplo de uso de Redis (si está disponible)
+app.get("/cached-data", async (req, res) => {
+  if (redisClient) {
+    try {
+      let data = await redisClient.get('some_key');
+      if (data) {
+        return res.json({ data: JSON.parse(data) });
+      }
+    } catch (err) {
+      console.error("Error al acceder a Redis:", err);
+    }
+  }
+  // Si Redis no está disponible o no hay datos en la caché
+  let data = { message: "Datos calculados o recuperados de la base de datos" };
+  if (redisClient) {
+    try {
+      await redisClient.set('some_key', JSON.stringify(data), {
+        EX: 3600 // Expira en 1 hora
+      });
+    } catch (err) {
+      console.error("Error al escribir en Redis:", err);
+    }
+  }
+  return res.json({ data });
 });
 
 app.listen(PORT, () => {
