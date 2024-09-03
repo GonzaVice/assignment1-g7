@@ -185,23 +185,41 @@ router.get("/search", async (req, res) => {
       });
     }
 
-    // Creamos un array de palabras de búsqueda
-    const searchWords = query.split(" ").filter((word) => word.length > 0);
+    let books;
+    let total;
 
-    // Creamos una expresión regular para cada palabra
-    const regexPatterns = searchWords.map((word) => new RegExp(word, "i"));
+    // Verificar si Elasticsearch está disponible
+    if (await isElasticSearchAvailable()) {
+      const { body } = await elasticsearchClient.search({
+        index: "books",
+        body: {
+          query: {
+            multi_match: {
+              query: query,
+              fields: ["name", "summary"],
+            },
+          },
+        },
+        from: skip,
+        size: limit,
+      });
 
-    // Buscamos libros que contengan cualquiera de las palabras en su descripción
-    const books = await Book.find({ summary: { $in: regexPatterns } })
-      .populate("author", "name")
-      .skip(skip)
-      .limit(limit)
-      .exec();
+      books = body.hits.hits.map(hit => hit._source);
+      total = body.hits.total.value;
+    } else {
+      const searchWords = query.split(" ").filter((word) => word.length > 0);
+      const regexPatterns = searchWords.map((word) => new RegExp(word, "i"));
 
-    // Contamos el total de resultados para la paginación
-    const total = await Book.countDocuments({
-      summary: { $in: regexPatterns },
-    });
+      books = await Book.find({ summary: { $in: regexPatterns } })
+        .populate("author", "name")
+        .skip(skip)
+        .limit(limit)
+        .exec();
+
+      total = await Book.countDocuments({
+        summary: { $in: regexPatterns },
+      });
+    }
 
     const totalPages = Math.ceil(total / limit);
 
@@ -223,12 +241,24 @@ router.post("/", async (req, res) => {
     name: req.body.name,
     summary: req.body.summary,
     publicationDate: req.body.publicationDate,
-    totalSales: req.body.totalSales,
     author: req.body.author,
   });
 
   try {
     const newBook = await book.save();
+
+    if (await isElasticSearchAvailable()) {
+      await elasticsearchClient.index({
+        index: "books",
+        id: newBook._id.toString(),
+        body: {
+          name: newBook.name,
+          summary: newBook.summary,
+          author: newBook.author,
+        },
+      });
+    }
+
     res.redirect(`/books/${newBook._id}`);
   } catch (err) {
     const authors = await Author.find();
@@ -257,12 +287,26 @@ router.put("/:id", async (req, res) => {
     name: req.body.name,
     summary: req.body.summary,
     publicationDate: req.body.publicationDate,
-    totalSales: req.body.totalSales,
     author: req.body.author,
   };
 
   try {
-    await Book.updateOne({ _id: req.params.id }, updates);
+    const updatedBook = await Book.findByIdAndUpdate(req.params.id, updates, { new: true });
+
+    if (await isElasticSearchAvailable()) {
+      await elasticsearchClient.update({
+        index: "books",
+        id: updatedBook._id.toString(),
+        body: {
+          doc: {
+            name: updatedBook.name,
+            summary: updatedBook.summary,
+            author: updatedBook.author,
+          },
+        },
+      });
+    }
+
     res.redirect(`/books/${req.params.id}`);
   } catch (err) {
     const authors = await Author.find();
@@ -275,12 +319,19 @@ router.put("/:id", async (req, res) => {
 });
 
 // DELETE a book
-router.delete("/:id", getBook, async (req, res) => {
+router.delete("/:id", async (req, res) => {
   try {
-    await Book.deleteOne({ _id: res.book._id });
+    await Book.findByIdAndDelete(req.params.id);
+
+    if (await isElasticSearchAvailable()) {
+      await elasticsearchClient.delete({
+        index: "books",
+        id: req.params.id.toString(),
+      });
+    }
+
     res.redirect("/books");
   } catch (err) {
-    console.error(err);
     res.status(500).render("error", { message: "Error deleting the book" });
   }
 });

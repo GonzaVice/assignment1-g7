@@ -2,6 +2,7 @@ const express = require("express");
 const methodOverride = require("method-override"); //Es para hacer PUT y DELETE del CRUD
 const path = require("path");
 const connectDB = require("./config/db");
+const { Client } = require("@elastic/elasticsearch");
 require("dotenv").config();
 
 global.__basedir = __dirname;
@@ -10,6 +11,23 @@ const app = express();
 
 // Connect to MongoDB
 connectDB();
+
+// ElasticSearch
+const elasticsearchClient = new Client({
+  node: process.env.ELASTICSEARCH_URL || "http://localhost:9200",
+});
+
+const isElasticSearchAvailable = async () => {
+  try {
+    const health = await elasticsearchClient.cluster.health();
+    return health.status !== "red";
+  } catch (error) {
+    console.error("Elasticsearch no está disponible:", error);
+    return false;
+  }
+};
+
+module.exports = { elasticsearchClient, isElasticSearchAvailable };
 
 // Middleware
 app.use(express.json());

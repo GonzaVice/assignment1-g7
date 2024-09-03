@@ -7,8 +7,10 @@ services:
       - "3000:3000"
     depends_on:
       - mongo
+      - elasticsearch
     environment:
       - MONGODB_URI=mongodb://mongo:27017/tu_base_de_datos
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
 
   mongo:
     build:
@@ -16,3 +18,13 @@ services:
       dockerfile: Dockerfile.mongo
     ports:
       - "27017:27017"
+
+  elasticsearch:
+    image: elasticsearch:7.17.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+
