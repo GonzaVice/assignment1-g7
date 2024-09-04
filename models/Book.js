@@ -25,6 +25,9 @@ const BookSchema = new mongoose.Schema(
       ref: "Author",
       required: true,
     },
+    coverImage: {
+      type: String, // Ruta de la imagen de la portada
+    },
   },
   { timestamps: true }
 );

@@ -4,6 +4,45 @@ const Author = require("../models/Author");
 const Book = require("../models/Book");
 const Review = require("../models/Review");
 const Sale = require("../models/Sale");
+const multer = require("multer");
+const path = require("path");
+
+// Configuración de Multer
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, process.env.IMAGE_UPLOAD_PATH || "uploads/");
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + path.extname(file.originalname));
+  },
+});
+
+const upload = multer({ storage: storage });
+
+// Ruta para subir la imagen del perfil del autor
+router.post("/upload", upload.single("profileImage"), async (req, res) => {
+  try {
+    const author = await Author.findById(req.body.authorId);
+    if (!author) {
+      return res.status(404).send("Autor no encontrado");
+    }
+    author.profileImage = req.file.path;
+    await author.save();
+    res.send("Imagen del perfil subida con éxito");
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+// Ruta para obtener todos los autores al seleccionar
+router.get("/all", async (req, res) => {
+  try {
+    const authors = await Author.find().select("name");
+    res.json(authors);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
 
 // GET all authors
 router.get("/", async (req, res) => {

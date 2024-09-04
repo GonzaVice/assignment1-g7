@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Subir Imagen</title>
+    <script>
+      async function loadOptions() {
+        const authorsResponse = await fetch("/authors/all");
+        const authors = await authorsResponse.json();
+        const authorsSelect = document.getElementById("authorSelect");
+        authors.forEach((author) => {
+          const option = document.createElement("option");
+          option.value = author._id;
+          option.textContent = author.name;
+          authorsSelect.appendChild(option);
+        });
+
+        const booksResponse = await fetch("/books/all");
+        const books = await booksResponse.json();
+        const booksSelect = document.getElementById("bookSelect");
+        books.forEach((book) => {
+          const option = document.createElement("option");
+          option.value = book._id;
+          option.textContent = book.name;
+          booksSelect.appendChild(option);
+        });
+      }
+
+      window.onload = loadOptions;
+    </script>
+  </head>
+  <body>
+    <h1>Subir Imagen de Autor</h1>
+    <form action="/authors/upload" method="POST" enctype="multipart/form-data">
+      <input type="file" name="profileImage" required />
+      <select id="authorSelect" name="authorId" required>
+        <option value="">Selecciona un autor</option>
+      </select>
+      <button type="submit">Subir</button>
+    </form>
+
+    <h1>Subir Imagen de Libro</h1>
+    <form action="/books/upload" method="POST" enctype="multipart/form-data">
+      <input type="file" name="coverImage" required />
+      <select id="bookSelect" name="bookId" required>
+        <option value="">Selecciona un libro</option>
+      </select>
+      <button type="submit">Subir</button>
+    </form>
+  </body>
+</html>

@@ -10,6 +10,15 @@
     <p>Date of Birth: <%= author.dateOfBirth.toDateString() %></p>
     <p>Country of Origin: <%= author.countryOfOrigin %></p>
     <p>Description: <%= author.description %></p>
+    <% if (author.profileImage) { %>
+    <img
+      src="/<%= author.profileImage %>"
+      alt="<%= author.name %> Profile Image"
+      style="max-width: 200px"
+    />
+    <% } else { %>
+    <p>No profile image available.</p>
+    <% } %>
     <a href="/authors/<%= author._id %>/edit">Edit</a>
     <form
       action="/authors/<%= author._id %>?_method=DELETE"

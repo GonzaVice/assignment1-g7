@@ -14,6 +14,15 @@
     <p>Number of Sales: <%= book.totalSales %></p>
     <h2>Summary</h2>
     <p><%= book.summary %></p>
+    <% if (book.coverImage) { %>
+    <img
+      src="/<%= book.coverImage %>"
+      alt="<%= book.name %> Cover Image"
+      style="max-width: 200px"
+    />
+    <% } else { %>
+    <p>No cover image available.</p>
+    <% } %>
     <a href="/books/<%= book._id %>/edit">Edit</a>
     <form
       action="/books/<%= book._id %>?_method=DELETE"

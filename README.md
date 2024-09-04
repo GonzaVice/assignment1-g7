@@ -15,7 +15,7 @@ git init
 git clone https://github.com/GonzaVice/assignment1-g7.git
 ```
 
-### 3. Install express, mongoose, dotenv, ejs, method-override y faker-js
+### 3. Install express, mongoose, dotenv, ejs, method-override, faker-js y multer
 
 ```
 npm i express mongoose dotenv ejs method-override @faker-js/faker
@@ -28,6 +28,7 @@ Example: (with host = 'localhost:27017' and database = 'libros_criticas_db')
 ```
 MONGODB_URI=mongodb://localhost:27017/libros_criticas_db
 PORT=3000
+IMAGE_UPLOAD_PATH=uploads/
 ```
 
 ### 5. Populate database

@@ -21,6 +21,9 @@ const AuthorSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    profileImage: {
+      type: String, // Ruta de la imagen del perfil
+    },
   },
   { timestamps: true }
 );
