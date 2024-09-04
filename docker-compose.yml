@@ -9,6 +9,8 @@ services:
       - mongo
     environment:
       - MONGODB_URI=mongodb://mongo:27017/libros_criticas_db
+    command: >
+      sh -c "node populateDB.js && node app.js"
 
   mongo:
     build:
