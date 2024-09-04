@@ -16,19 +16,33 @@ connectDB();
 let redisClient;
 
 (async () => {
-  redisClient = redis.createClient({
-    url: process.env.REDIS_URL || "redis://localhost:6379"
-  });
+  const redisURL = process.env.REDIS_URL;
 
-  redisClient.on('error', (err) => {
-    console.error("No se pudo conectar a Redis. Continuando sin Redis...", err);
-    redisClient = null; // Si hay un error, no se usará Redis
-  });
+  if (redisURL) {
+    try {
+      redisClient = redis.createClient({
+        url: redisURL
+      });
 
-  await redisClient.connect().catch((err) => {
-    console.error("Error al conectar a Redis:", err);
+      redisClient.on('error', async (err) => {
+        console.error("No se pudo conectar a Redis. Continuando sin Redis...", err);
+        await redisClient.quit(); // Cierra la conexión con Redis
+        redisClient = null; // Desactiva el uso de Redis
+      });
+
+      await redisClient.connect();
+      console.log("Conectado a Redis");
+    } catch (err) {
+      console.error("Error al conectar a Redis:", err);
+      if (redisClient) {
+        await redisClient.quit(); // Asegúrate de cerrar la conexión si algo falla
+        redisClient = null;
+      }
+    }
+  } else {
+    console.warn("REDIS_URL no está definido. Continuando sin Redis...");
     redisClient = null;
-  });
+  }
 })();
 
 // Middleware
