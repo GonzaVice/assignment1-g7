@@ -69,31 +69,166 @@ app.get("/", (req, res) => {
   res.render("home");
 });
 
-// Ejemplo de uso de Redis (si está disponible)
-app.get("/cached-data", async (req, res) => {
+// Ejemplo de uso de Redis (si está disponible) para el modelo Book
+app.get("/book/:id", async (req, res) => {
+  const bookId = req.params.id;
+
   if (redisClient) {
     try {
-      let data = await redisClient.get('some_key');
-      if (data) {
-        return res.json({ data: JSON.parse(data) });
+      let cachedBook = await redisClient.get(`book_${bookId}`);
+      if (cachedBook) {
+        return res.json({ data: JSON.parse(cachedBook) });
       }
     } catch (err) {
       console.error("Error al acceder a Redis:", err);
     }
   }
-  // Si Redis no está disponible o no hay datos en la caché
-  let data = { message: "Datos calculados o recuperados de la base de datos" };
+
+  try {
+    // Si Redis no está disponible o no hay datos en la caché, se recuperan los datos de MongoDB
+    let book = await Book.findById(bookId).populate("author").exec();
+    if (!book) {
+      return res.status(404).json({ message: "Libro no encontrado" });
+    }
+
+    // Guardar los datos en Redis con una expiración de 1 hora
+    if (redisClient) {
+      try {
+        await redisClient.set(`book_${bookId}`, JSON.stringify(book), {
+          EX: 3600 // Expira en 1 hora
+        });
+      } catch (err) {
+        console.error("Error al escribir en Redis:", err);
+      }
+    }
+
+    return res.json({ data: book });
+  } catch (err) {
+    console.error("Error al recuperar el libro de la base de datos:", err);
+    return res.status(500).json({ message: "Error interno del servidor" });
+  }
+});
+
+// Ejemplo de uso de Redis (si está disponible) para el modelo Author
+app.get("/author/:id", async (req, res) => {
+  const authorId = req.params.id;
+
   if (redisClient) {
     try {
-      await redisClient.set('some_key', JSON.stringify(data), {
-        EX: 3600 // Expira en 1 hora
-      });
+      let cachedAuthor = await redisClient.get(`author_${authorId}`);
+      if (cachedAuthor) {
+        return res.json({ data: JSON.parse(cachedAuthor) });
+      }
     } catch (err) {
-      console.error("Error al escribir en Redis:", err);
+      console.error("Error al acceder a Redis:", err);
     }
   }
-  return res.json({ data });
+
+  try {
+    // Si Redis no está disponible o no hay datos en la caché, se recuperan los datos de MongoDB
+    let author = await Author.findById(authorId).populate("books").exec();
+    if (!author) {
+      return res.status(404).json({ message: "Autor no encontrado" });
+    }
+
+    // Guardar los datos en Redis con una expiración de 1 hora
+    if (redisClient) {
+      try {
+        await redisClient.set(`author_${authorId}`, JSON.stringify(author), {
+          EX: 3600 // Expira en 1 hora
+        });
+      } catch (err) {
+        console.error("Error al escribir en Redis:", err);
+      }
+    }
+
+    return res.json({ data: author });
+  } catch (err) {
+    console.error("Error al recuperar el autor de la base de datos:", err);
+    return res.status(500).json({ message: "Error interno del servidor" });
+  }
 });
+
+// Ejemplo de uso de Redis (si está disponible) para el modelo Review
+app.get("/review/:id", async (req, res) => {
+  const reviewId = req.params.id;
+
+  if (redisClient) {
+    try {
+      let cachedReview = await redisClient.get(`review_${reviewId}`);
+      if (cachedReview) {
+        return res.json({ data: JSON.parse(cachedReview) });
+      }
+    } catch (err) {
+      console.error("Error al acceder a Redis:", err);
+    }
+  }
+
+  try {
+    // Si Redis no está disponible o no hay datos en la caché, se recuperan los datos de MongoDB
+    let review = await Review.findById(reviewId).populate("book").exec();
+    if (!review) {
+      return res.status(404).json({ message: "Reseña no encontrada" });
+    }
+
+    // Guardar los datos en Redis con una expiración de 1 hora
+    if (redisClient) {
+      try {
+        await redisClient.set(`review_${reviewId}`, JSON.stringify(review), {
+          EX: 3600 // Expira en 1 hora
+        });
+      } catch (err) {
+        console.error("Error al escribir en Redis:", err);
+      }
+    }
+
+    return res.json({ data: review });
+  } catch (err) {
+    console.error("Error al recuperar la reseña de la base de datos:", err);
+    return res.status(500).json({ message: "Error interno del servidor" });
+  }
+});
+
+// Ejemplo de uso de Redis (si está disponible) para el modelo Sale
+app.get("/sale/:id", async (req, res) => {
+  const saleId = req.params.id;
+
+  if (redisClient) {
+    try {
+      let cachedSale = await redisClient.get(`sale_${saleId}`);
+      if (cachedSale) {
+        return res.json({ data: JSON.parse(cachedSale) });
+      }
+    } catch (err) {
+      console.error("Error al acceder a Redis:", err);
+    }
+  }
+
+  try {
+    // Si Redis no está disponible o no hay datos en la caché, se recuperan los datos de MongoDB
+    let sale = await Sale.findById(saleId).populate("book").exec();
+    if (!sale) {
+      return res.status(404).json({ message: "Venta no encontrada" });
+    }
+
+    // Guardar los datos en Redis con una expiración de 1 hora
+    if (redisClient) {
+      try {
+        await redisClient.set(`sale_${saleId}`, JSON.stringify(sale), {
+          EX: 3600 // Expira en 1 hora
+        });
+      } catch (err) {
+        console.error("Error al escribir en Redis:", err);
+      }
+    }
+
+    return res.json({ data: sale });
+  } catch (err) {
+    console.error("Error al recuperar la venta de la base de datos:", err);
+    return res.status(500).json({ message: "Error interno del servidor" });
+  }
+});
+
 
 app.listen(PORT, () => {
   console.log(`Server corriendo en el puerto ${PORT}`);
