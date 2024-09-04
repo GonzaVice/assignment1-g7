@@ -10,7 +10,7 @@ services:
       - elasticsearch
     environment:
       - MONGODB_URI=mongodb://mongo:27017/tu_base_de_datos
-      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - ELASTICSEARCH_URL=http://elasticsearch:9200  # Añade la URL de Elasticsearch
 
   mongo:
     build:

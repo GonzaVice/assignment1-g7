@@ -4,6 +4,7 @@ const Book = require("../models/Book");
 const Author = require("../models/Author");
 const Review = require("../models/Review");
 const Sale = require("../models/Sale");
+const { isElasticSearchAvailable, elasticsearchClient } = require("../app");
 
 // GET all books
 router.get("/", async (req, res) => {
@@ -168,7 +169,7 @@ router.get("/top-selling", async (req, res) => {
   }
 });
 
-// GET busqueda
+// GET búsqueda
 router.get("/search", async (req, res) => {
   try {
     const { query } = req.query;
@@ -190,7 +191,7 @@ router.get("/search", async (req, res) => {
 
     // Verificar si Elasticsearch está disponible
     if (await isElasticSearchAvailable()) {
-      const { body } = await elasticsearchClient.search({
+      const response = await elasticsearchClient.search({
         index: "books",
         body: {
           query: {
@@ -204,8 +205,14 @@ router.get("/search", async (req, res) => {
         size: limit,
       });
 
-      books = body.hits.hits.map(hit => hit._source);
-      total = body.hits.total.value;
+      // Verifica la estructura de la respuesta
+      if (response.body && response.body.hits) {
+        books = response.body.hits.hits.map(hit => hit._source);
+        total = response.body.hits.total.value;
+      } else {
+        books = [];
+        total = 0;
+      }
     } else {
       const searchWords = query.split(" ").filter((word) => word.length > 0);
       const regexPatterns = searchWords.map((word) => new RegExp(word, "i"));
@@ -246,8 +253,8 @@ router.post("/", async (req, res) => {
 
   try {
     const newBook = await book.save();
-
     if (await isElasticSearchAvailable()) {
+      console.log("Funciona elastic")
       await elasticsearchClient.index({
         index: "books",
         id: newBook._id.toString(),
@@ -324,14 +331,25 @@ router.delete("/:id", async (req, res) => {
     await Book.findByIdAndDelete(req.params.id);
 
     if (await isElasticSearchAvailable()) {
-      await elasticsearchClient.delete({
-        index: "books",
-        id: req.params.id.toString(),
-      });
+      try {
+        const response = await elasticsearchClient.delete({
+          index: "books",
+          id: req.params.id.toString(),
+        });
+
+        if (response.body && response.body.result !== "deleted") {
+          console.log("Error al eliminar el documento en Elasticsearch:", response.body);
+          return res.status(500).render("error", { message: "Error deleting the document in Elasticsearch" });
+        } 
+        } catch (error) {
+        console.error("Error al eliminar en Elasticsearch:", error);
+        return res.status(500).render("error", { message: "Error deleting the book in Elasticsearch" });
+      }
     }
 
     res.redirect("/books");
   } catch (err) {
+    console.error("Error al eliminar el libro:", err);
     res.status(500).render("error", { message: "Error deleting the book" });
   }
 });
