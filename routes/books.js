@@ -5,21 +5,167 @@ const Author = require("../models/Author");
 const Review = require("../models/Review");
 const Sale = require("../models/Sale");
 
-// GET all books
-router.get("/", async (req, res) => {
-  try {
-    const books = await Book.find().populate("author");
-    res.render("books/index", { books });
-  } catch (err) {
-    res.status(500).render("error", { message: err.message });
+// Middleware para verificar disponibilidad de Redis
+const checkRedisAvailable = (req, res, next) => {
+  if (req.redisClient) {
+    console.warn("Redis está disponible.");
   }
-});
+  next();
+};
+
+// Utiliza el middleware
+router.use(checkRedisAvailable);
 
 // GET form to create a new book
 router.get("/new", async (req, res) => {
   const authors = await Author.find();
   res.render("books/new", { authors });
 });
+
+// GET all books
+router.get("/", async (req, res) => {
+  try {
+    const cacheKey = 'allBooks';
+    let books = req.redisClient ? await req.redisClient.get(cacheKey) : null;
+
+    if (books) {
+      books = JSON.parse(books);
+    } else {
+      books = await Book.find().populate("author");
+      if (req.redisClient) {
+        await req.redisClient.set(cacheKey, JSON.stringify(books), {
+          EX: 3600 // Expire in 1 hour
+        });
+      }
+    }
+
+    res.render("books/index", { books });
+  } catch (err) {
+    res.status(500).render("error", { message: err.message });
+  }
+});
+
+// GET one book
+router.get("/:id", getBook, async (req, res) => {
+  try {
+    const cacheKey = `book:${res.book._id}`;
+
+    let book;
+    if (req.redisClient) {
+      // Intenta obtener el libro del caché
+      const cachedBook = await req.redisClient.get(cacheKey);
+      if (cachedBook) {
+        book = JSON.parse(cachedBook);
+      }
+    }
+
+    if (!book) {
+      // Si no está en caché, usa el libro de la respuesta
+      book = res.book;
+
+      if (req.redisClient) {
+        // Guarda el libro en caché
+        await req.redisClient.set(cacheKey, JSON.stringify(book), {
+          EX: 3600 // Expire in 1 hour
+        });
+      }
+    }
+
+    res.render("books/show", { book });
+  } catch (err) {
+    res.status(500).render("error", { message: err.message });
+  }
+});
+
+
+// POST create a new book
+router.post("/", async (req, res) => {
+  const book = new Book({
+    name: req.body.name,
+    summary: req.body.summary,
+    publicationDate: req.body.publicationDate,
+    totalSales: req.body.totalSales,
+    author: req.body.author,
+  });
+
+  try {
+    const newBook = await book.save();
+    if (req.redisClient) {
+      await req.redisClient.del(newBook._id);
+      await req.redisClient.del('allBooks'); // Invalida el caché de todos los libros
+    }
+    res.redirect(`/books/${newBook._id}`);
+  } catch (err) {
+    const authors = await Author.find();
+    res.render("books/new", {
+      book: book,
+      authors: authors,
+      errorMessage: err.message,
+    });
+  }
+});
+
+// PUT update a book
+router.put("/:id", async (req, res) => {
+  const updates = {
+    name: req.body.name,
+    summary: req.body.summary,
+    publicationDate: req.body.publicationDate,
+    totalSales: req.body.totalSales,
+    author: req.body.author,
+  };
+
+  try {
+    await Book.updateOne({ _id: req.params.id }, updates);
+    if (req.redisClient) {
+      await req.redisClient.del(`book:${req.params.id}`);
+      await req.redisClient.del('allBooks'); // Invalida el caché de todos los libros
+    }
+    res.redirect(`/books/${req.params.id}`);
+  } catch (err) {
+    const authors = await Author.find();
+    res.render("books/edit", {
+      book: { _id: req.params.id, ...updates },
+      authors: authors,
+      errorMessage: err.message,
+    });
+  }
+});
+
+// DELETE a book
+router.delete("/:id", getBook, async (req, res) => {
+
+  try {
+    await Book.deleteOne({ _id: res.book._id });
+    if (req.redisClient) {
+      await req.redisClient.del(`book:${req.params.id}`);
+      await req.redisClient.del('allBooks'); // Invalida el caché de todos los libros
+    }
+    res.redirect("/books");
+  } catch (err) {
+    console.error(err);
+    res.status(500).render("error", { message: "Error deleting the book" });
+  }
+});
+
+// Middleware function to get book by ID
+async function getBook(req, res, next) {
+  let book;
+  try {
+    book = await Book.findById(req.params.id).populate("author");
+    if (book == null) {
+      return res.status(404).render("error", { message: "Cannot find book" });
+    }
+  } catch (err) {
+    console.error(err);
+    return res
+      .status(500)
+      .render("error", { message: "Error retrieving the book" });
+  }
+
+  res.book = book;
+  next();
+}
 
 // GET top 10 rated books
 router.get("/top-rated", async (req, res) => {
@@ -217,73 +363,12 @@ router.get("/search", async (req, res) => {
   }
 });
 
-// POST create a new book
-router.post("/", async (req, res) => {
-  const book = new Book({
-    name: req.body.name,
-    summary: req.body.summary,
-    publicationDate: req.body.publicationDate,
-    totalSales: req.body.totalSales,
-    author: req.body.author,
-  });
-
-  try {
-    const newBook = await book.save();
-    res.redirect(`/books/${newBook._id}`);
-  } catch (err) {
-    const authors = await Author.find();
-    res.render("books/new", {
-      book: book,
-      authors: authors,
-      errorMessage: err.message,
-    });
-  }
-});
-
-// GET one book
-router.get("/:id", getBook, (req, res) => {
-  res.render("books/show", { book: res.book });
-});
-
 // GET form to edit a book
 router.get("/:id/edit", getBook, async (req, res) => {
   const authors = await Author.find();
   res.render("books/edit", { book: res.book, authors: authors });
 });
 
-// PUT update a book
-router.put("/:id", async (req, res) => {
-  const updates = {
-    name: req.body.name,
-    summary: req.body.summary,
-    publicationDate: req.body.publicationDate,
-    totalSales: req.body.totalSales,
-    author: req.body.author,
-  };
-
-  try {
-    await Book.updateOne({ _id: req.params.id }, updates);
-    res.redirect(`/books/${req.params.id}`);
-  } catch (err) {
-    const authors = await Author.find();
-    res.render("books/edit", {
-      book: { _id: req.params.id, ...updates },
-      authors: authors,
-      errorMessage: err.message,
-    });
-  }
-});
-
-// DELETE a book
-router.delete("/:id", getBook, async (req, res) => {
-  try {
-    await Book.deleteOne({ _id: res.book._id });
-    res.redirect("/books");
-  } catch (err) {
-    console.error(err);
-    res.status(500).render("error", { message: "Error deleting the book" });
-  }
-});
 
 // Middleware function to get book by ID
 async function getBook(req, res, next) {
