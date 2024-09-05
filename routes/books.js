@@ -116,7 +116,6 @@ router.get("/:id", getBook, async (req, res) => {
   }
 });
 
-
 // POST create a new book
 router.post("/", async (req, res) => {
   const book = new Book({

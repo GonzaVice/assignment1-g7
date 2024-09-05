@@ -44,16 +44,6 @@ router.get("/all", async (req, res) => {
   }
 });
 
-// GET all authors
-router.get("/", async (req, res) => {
-  try {
-    const authors = await Author.find();
-    res.render("authors/index", { authors });
-  } catch (err) {
-    res.status(500).render("error", { message: err.message });
-  }
-});
-
 // GET form to create a new author
 router.get("/new", (req, res) => {
   res.render("authors/new");
@@ -96,6 +86,58 @@ router.get("/stats", async (req, res) => {
   }
 });
 
+// GET all authors
+router.get("/", async (req, res) => {
+  try {
+    const cacheKey = 'allAuthors';
+    let authors = req.redisClient ? await req.redisClient.get(cacheKey) : null;
+
+    if (authors) {
+      authors = JSON.parse(authors);
+    } else {
+      authors = await Author.find()
+      if (req.redisClient) {
+        await req.redisClient.set(cacheKey, JSON.stringify(authors), {
+          EX: 3600 // Expire in 1 hour
+        });
+      }
+    }
+
+    res.render("authors/index", { authors });
+  } catch (err) {
+    res.status(500).render("error", { message: err.message });
+  }
+});
+
+// GET one author
+router.get("/:id", getAuthor, async (req, res) => {
+  try {
+    const cacheKey = `author:${res.author._id}`;
+
+    let author;
+    if (req.redisClient) {
+      const cachedAuthor = await req.redisClient.get(cacheKey);
+      if (cachedAuthor) {
+        author = JSON.parse(cachedAuthor);
+      }
+    }
+
+    if (!author) {
+      author = res.author;
+
+      if (req.redisClient) {
+        await req.redisClient.set(cacheKey, JSON.stringify(author), {
+          EX: 3600 // Expire in 1 hour
+        });
+      }
+    }
+
+    res.render("authors/show", { author });
+  } catch (err) {
+    res.status(500).render("error", { message: err.message });
+  }
+});
+
 // POST create a new author
 router.post("/", async (req, res) => {
   const author = new Author({
@@ -107,20 +149,14 @@ router.post("/", async (req, res) => {
 
   try {
     const newAuthor = await author.save();
+    if (req.redisClient) {
+      await req.redisClient.del(newAuthor._id);
+      await req.redisClient.del('allAuthors'); // Invalida el caché de todos los libros
+    }
     res.redirect(`/authors/${newAuthor._id}`);
   } catch (err) {
     res.render("authors/new", { author: author, errorMessage: err.message });
   }
-});
-
-// GET one author
-router.get("/:id", getAuthor, (req, res) => {
-  res.render("authors/show", { author: res.author });
-});
-
-// GET form to edit an author
-router.get("/:id/edit", getAuthor, (req, res) => {
-  res.render("authors/edit", { author: res.author });
 });
 
 // PUT update an author
@@ -134,6 +170,10 @@ router.put("/:id", async (req, res) => {
 
   try {
     await Author.updateOne({ _id: req.params.id }, updates);
+    if (req.redisClient) {
+      await req.redisClient.del(`author:${req.params.id}`);
+      await req.redisClient.del('allAuthors'); // Invalida el caché de todos los libros
+    }
     res.redirect(`/authors/${req.params.id}`);
   } catch (err) {
     res.render("authors/edit", {
@@ -143,10 +183,20 @@ router.put("/:id", async (req, res) => {
   }
 });
 
+
+// GET form to edit an author
+router.get("/:id/edit", getAuthor, (req, res) => {
+  res.render("authors/edit", { author: res.author });
+});
+
 // DELETE an author
 router.delete("/:id", getAuthor, async (req, res) => {
   try {
     await Author.deleteOne({ _id: res.author._id });
+    if (req.redisClient) {
+      await req.redisClient.del(`author:${req.params.id}`);
+      await req.redisClient.del('allAuthors');
+    }
     res.redirect("/authors");
   } catch (err) {
     console.error(err);
