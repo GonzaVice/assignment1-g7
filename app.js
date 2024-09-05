@@ -22,14 +22,13 @@ let redisClient = null;
 const connectRedis = async () => {
   try {
     redisClient = redis.createClient({ url: process.env.REDIS_URL });
-
+    
     // Verifica la conexión
     await redisClient.connect();
     console.log("Redis connected successfully.");
   } catch (err) {
     console.error("Redis connection error:", err);
     redisClient = null; // Desactiva el cliente Redis si no se puede conectar
-    await redisClient.quit(); // Cierra la conexión con Redis
   }
 };
 
