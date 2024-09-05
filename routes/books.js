@@ -4,6 +4,45 @@ const Book = require("../models/Book");
 const Author = require("../models/Author");
 const Review = require("../models/Review");
 const Sale = require("../models/Sale");
+const multer = require("multer");
+const path = require("path");
+
+// Configuración de Multer
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, process.env.IMAGE_UPLOAD_PATH || "uploads/");
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + path.extname(file.originalname));
+  },
+});
+
+const upload = multer({ storage: storage });
+
+// Ruta para subir la imagen de la portada del libro
+router.post("/upload", upload.single("coverImage"), async (req, res) => {
+  try {
+    const book = await Book.findById(req.body.bookId);
+    if (!book) {
+      return res.status(404).send("Libro no encontrado");
+    }
+    book.coverImage = req.file.path;
+    await book.save();
+    res.send("Imagen de la portada subida con éxito");
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+// Ruta para obtener todos los libros para seleccionar
+router.get("/all", async (req, res) => {
+  try {
+    const books = await Book.find().select("name");
+    res.json(books);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
 
 // Middleware para verificar disponibilidad de Redis
 const checkRedisAvailable = (req, res, next) => {

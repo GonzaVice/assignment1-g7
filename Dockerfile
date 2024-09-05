@@ -8,6 +8,8 @@ RUN npm install
 
 COPY . .
 
+RUN mkdir -p /app/uploads && chmod 777 /app/uploads
+
 RUN useradd -m myuser
 
 USER myuser
