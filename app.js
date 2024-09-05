@@ -43,39 +43,6 @@ const redisMiddleware = (req, res, next) => {
 app.use(redisMiddleware);
 
 
-(async () => {
-  const redisURL = process.env.REDIS_URL;
-
-  if (redisURL) {
-    try {
-      redisClient = redis.createClient({
-        url: redisURL,
-      });
-
-      redisClient.on("error", async (err) => {
-        console.error(
-          "No se pudo conectar a Redis. Continuando sin Redis...",
-          err
-        );
-        await redisClient.quit(); // Cierra la conexión con Redis
-        redisClient = null; // Desactiva el uso de Redis
-      });
-
-      await redisClient.connect();
-      console.log("Conectado a Redis");
-    } catch (err) {
-      console.error("Error al conectar a Redis:", err);
-      if (redisClient) {
-        await redisClient.quit(); // Asegúrate de cerrar la conexión si algo falla
-        redisClient = null;
-      }
-    }
-  } else {
-    console.warn("REDIS_URL no está definido. Continuando sin Redis...");
-    redisClient = null;
-  }
-})();
-
 // Configurar Multer
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -91,6 +58,7 @@ const upload = multer({ storage: storage });
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
 //app.use(express.static(path.join(__dirname, "public")));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
