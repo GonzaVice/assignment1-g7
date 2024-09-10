@@ -3,10 +3,34 @@ const router = express.Router();
 const Review = require("../models/Review");
 const Book = require("../models/Book");
 
+// Middleware para verificar disponibilidad de Redis
+const checkRedisAvailable = (req, res, next) => {
+  if (req.redisClient) {
+    console.warn("Redis está disponible.");
+  }
+  next();
+};
+
+// Utiliza el middleware
+router.use(checkRedisAvailable);
+
 // GET all reviews
 router.get("/", async (req, res) => {
   try {
-    const reviews = await Review.find().populate("book");
+    const cacheKey = 'allReviews';
+    let reviews = req.redisClient ? await req.redisClient.get(cacheKey) : null;
+
+    if (reviews) {
+      reviews = JSON.parse(reviews);
+    } else {
+      reviews = await Review.find().populate('book');
+      if (req.redisClient) {
+        await req.redisClient.set(cacheKey, JSON.stringify(reviews), {
+          EX: 3600 // Expire in 1 hour
+        })
+      }
+    }
+
     res.render("reviews/index", { reviews });
   } catch (err) {
     res.status(500).render("error", { message: err.message });
@@ -30,6 +54,10 @@ router.post("/", async (req, res) => {
 
   try {
     const newReview = await review.save();
+    if (req.redisClient) {
+      await req.redisClient.del(newReview._id);
+      await req.redisClient.del('allReviews'); // Invalida el caché 
+    }
     res.redirect(`/reviews/${newReview._id}`);
   } catch (err) {
     const books = await Book.find();
@@ -42,8 +70,34 @@ router.post("/", async (req, res) => {
 });
 
 // GET one review
-router.get("/:id", getReview, (req, res) => {
-  res.render("reviews/show", { review: res.review });
+router.get("/:id", getReview, async (req, res) => {
+  try {
+    const cacheKey = `review:${res.review._id}`;
+
+    let review;
+    if (req.redisClient) {
+      // Intenta obtener reseña del cache
+      const cachedReview = await req.redisClient.get(cacheKey);
+      if (cachedReview) {
+        review = JSON.parse(cachedReview);
+      }
+    }
+
+  if (!review) {
+    review = res.review;
+
+    if (req.redisClient) {
+      // Guarda la review en cache
+      await req.redisClient.set(cacheKey, JSON.stringify(book), {
+        EX: 3600
+      })
+    }
+  }
+
+    res.render("reviews/show", { review })
+  } catch (err) {
+    res.status(500).render("error", { message: err.message });
+  }
 });
 
 // GET form to edit a review
@@ -62,6 +116,10 @@ router.put("/:id", async (req, res) => {
 
   try {
     await Review.updateOne({ _id: req.params.id }, updates);
+    if (req.redisClient) {
+      await req.redisClient.del(`review:${req.params.id}`);
+      await req.redisClient.del('allReviews'); // Invalida el caché
+    }
     res.redirect(`/reviews/${req.params.id}`);
   } catch (err) {
     const books = await Book.find();
@@ -88,6 +146,10 @@ router.post("/:id/upvote", getReview, async (req, res) => {
 router.delete("/:id", getReview, async (req, res) => {
   try {
     await Review.deleteOne({ _id: res.review._id });
+    if (req.redisClient) {
+      await req.redisClient.del(`review:${req.params.id}`);
+      await req.redisClient.del('allReviews'); // Invalida el caché
+    }
     res.redirect("/reviews");
   } catch (err) {
     console.error(err);

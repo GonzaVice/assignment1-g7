@@ -19,6 +19,17 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
+// Middleware para verificar disponibilidad de Redis
+const checkRedisAvailable = (req, res, next) => {
+  if (req.redisClient) {
+    console.warn("Redis está disponible.");
+  }
+  next();
+};
+
+// Utiliza el middleware
+router.use(checkRedisAvailable);
+
 // Ruta para subir la imagen del perfil del autor
 router.post("/upload", upload.single("profileImage"), async (req, res) => {
   try {
@@ -151,7 +162,7 @@ router.post("/", async (req, res) => {
     const newAuthor = await author.save();
     if (req.redisClient) {
       await req.redisClient.del(newAuthor._id);
-      await req.redisClient.del('allAuthors'); // Invalida el caché de todos los libros
+      await req.redisClient.del('allAuthors'); // Invalida el caché
     }
     res.redirect(`/authors/${newAuthor._id}`);
   } catch (err) {
@@ -172,7 +183,7 @@ router.put("/:id", async (req, res) => {
     await Author.updateOne({ _id: req.params.id }, updates);
     if (req.redisClient) {
       await req.redisClient.del(`author:${req.params.id}`);
-      await req.redisClient.del('allAuthors'); // Invalida el caché de todos los libros
+      await req.redisClient.del('allAuthors'); // Invalida el caché
     }
     res.redirect(`/authors/${req.params.id}`);
   } catch (err) {
