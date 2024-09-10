@@ -6,7 +6,20 @@ const Book = require("../models/Book");
 // GET all sales
 router.get("/", async (req, res) => {
   try {
-    const sales = await Sale.find().populate("book");
+    const cacheKey = 'allSales';
+    let sales = req.redisClient ? await req.redisClient.get(cacheKey) : null;
+
+    if (sales) {
+      sales = JSON.parse(sales);
+    } else {
+      sales = await Sale.find().populate("book");
+      if (req.redisClient) {
+        await req.redisClient.set(cacheKey, JSON.stringify(sales), {
+          EX: 3600 // Expire in 1 hour
+        });
+      }
+    }
+
     res.render("sales/index", { sales });
   } catch (err) {
     res.status(500).render("error", { message: err.message });
@@ -29,6 +42,10 @@ router.post("/", async (req, res) => {
 
   try {
     const newSale = await sale.save();
+    if (req.redisClient) {
+      await req.redisClient.del(newSale._id);
+      await req.redisClient.del('allSales'); // Invalida el caché
+    }
     res.redirect(`/sales/${newSale._id}`);
   } catch (err) {
     const books = await Book.find();
@@ -41,8 +58,32 @@ router.post("/", async (req, res) => {
 });
 
 // GET one sale
-router.get("/:id", getSale, (req, res) => {
+router.get("/:id", getSale, async (req, res) => {
+  try {
+    const cacheKey = `sale:${res.sale._id}`
+
+    let sale;
+    if (req.redisClient) {
+      const cachedSale = await req.redisClient.get(cacheKey);
+      if (cachedSale) {
+        sale = JSON.parse(cachedSale);
+      }
+    }
+
+  if (!sale) {
+    sale = res.sale;
+
+    if (req.redisClient) {
+      await req.redisClient.set(cacheKey, JSON.stringify(sale), {
+        EX: 3600 // Expire in 1 hour
+      });
+    }
+  }
+
   res.render("sales/show", { sale: res.sale });
+} catch (err) {
+  res.status(500).render("error", { message: err.message });
+}
 });
 
 // GET form to edit a sale
@@ -61,6 +102,10 @@ router.put("/:id", async (req, res) => {
 
   try {
     await Sale.updateOne({ _id: req.params.id }, updates);
+    if (req.redisClient) {
+      await req.redisClient.del(`sale:${req.params.id}`);
+      await req.redisClient.del('allSales'); // Invalida el caché 
+    }
     res.redirect(`/sales/${req.params.id}`);
   } catch (err) {
     const books = await Book.find();
@@ -76,6 +121,10 @@ router.put("/:id", async (req, res) => {
 router.delete("/:id", getSale, async (req, res) => {
   try {
     await Sale.deleteOne({ _id: res.sale._id });
+    if (req.redisClient) {
+      await req.redisClient.del(`sale:${req.params.id}`);
+      await req.redisClient.del('allSales'); // Invalida el caché de todos los libros
+    }
     res.redirect("/sales");
   } catch (err) {
     console.error(err);
