@@ -72,12 +72,6 @@ const isElasticSearchAvailable = async () => {
 
 module.exports = { elasticsearchClient, isElasticSearchAvailable };
 
-// Importar modelos
-const Author = require("./models/Author");
-const Book = require("./models/Book");
-const Review = require("./models/Review");
-const Sale = require("./models/Sale");
-
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

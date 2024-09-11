@@ -7,7 +7,7 @@ const Sale = require("../models/Sale");
 const { isElasticSearchAvailable, elasticsearchClient } = require("../app");
 const multer = require("multer");
 const path = require("path");
-const upload = multer({ storage: storage });
+
 
 // Configuración de Multer
 const storage = multer.diskStorage({
@@ -18,6 +18,8 @@ const storage = multer.diskStorage({
     cb(null, Date.now() + path.extname(file.originalname));
   },
 });
+
+const upload = multer({ storage: storage });
 
 // Middleware para verificar disponibilidad de Redis
 const checkRedisAvailable = (req, res, next) => {
