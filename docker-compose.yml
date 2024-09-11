@@ -8,11 +8,14 @@ services:
     depends_on:
       - mongo
       - redis
+      - elasticsearch
     environment:
       - MONGODB_URI=mongodb://mongo:27017/libros_criticas_db
       - REDIS_URL=redis://redis:6379
     command: >
       sh -c "node populateDB.js && node app.js"
+      - MONGODB_URI=mongodb://mongo:27017/tu_base_de_datos
+      - ELASTICSEARCH_URL=http://elasticsearch:9200  # Añade la URL de Elasticsearch
 
   mongo:
     build:
@@ -34,3 +37,13 @@ services:
     image: redis:alpine
     ports:
       - "6379:6379"
+
+  elasticsearch:
+    image: elasticsearch:7.17.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+

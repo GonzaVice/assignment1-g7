@@ -7,6 +7,7 @@ const redis = require("redis");
 const multer = require("multer");
 const Author = require("./models/Author");
 const Book = require("./models/Book");
+const { Client } = require("@elastic/elasticsearch");
 require("dotenv").config();
 
 global.__basedir = __dirname;
@@ -53,6 +54,29 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage: storage });
+
+// ElasticSearch
+const elasticsearchClient = new Client({
+  node: process.env.ELASTICSEARCH_URL || "http://localhost:9200",
+});
+
+const isElasticSearchAvailable = async () => {
+  try {
+    const health = await elasticsearchClient.cluster.health();
+    return health.status !== "red";
+  } catch (error) {
+    console.error("Elasticsearch no está disponible:", error);
+    return false;
+  }
+};
+
+module.exports = { elasticsearchClient, isElasticSearchAvailable };
+
+// Importar modelos
+const Author = require("./models/Author");
+const Book = require("./models/Book");
+const Review = require("./models/Review");
+const Sale = require("./models/Sale");
 
 // Middleware
 app.use(express.json());

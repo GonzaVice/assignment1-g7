@@ -4,6 +4,7 @@ const Book = require("../models/Book");
 const Author = require("../models/Author");
 const Review = require("../models/Review");
 const Sale = require("../models/Sale");
+const { isElasticSearchAvailable, elasticsearchClient } = require("../app");
 const multer = require("multer");
 const path = require("path");
 
@@ -128,6 +129,19 @@ router.post("/", async (req, res) => {
 
   try {
     const newBook = await book.save();
+
+    if (await isElasticSearchAvailable()) {
+      await elasticsearchClient.index({
+        index: "books",
+        id: newBook._id.toString(),
+        body: {
+          name: newBook.name,
+          summary: newBook.summary,
+          author: newBook.author,
+        },
+      });
+    }
+
     if (req.redisClient) {
       await req.redisClient.del(newBook._id);
       await req.redisClient.del('allBooks'); // Invalida el caché de todos los libros
@@ -154,6 +168,23 @@ router.put("/:id", async (req, res) => {
   };
 
   try {
+
+    const updatedBook = await Book.findByIdAndUpdate(req.params.id, updates, { new: true });
+
+    if (await isElasticSearchAvailable()) {
+      await elasticsearchClient.update({
+        index: "books",
+        id: updatedBook._id.toString(),
+        body: {
+          doc: {
+            name: updatedBook.name,
+            summary: updatedBook.summary,
+            author: updatedBook.author,
+          },
+        },
+      });
+    }
+
     await Book.updateOne({ _id: req.params.id }, updates);
     if (req.redisClient) {
       await req.redisClient.del(`book:${req.params.id}`);
@@ -174,6 +205,25 @@ router.put("/:id", async (req, res) => {
 router.delete("/:id", getBook, async (req, res) => {
 
   try {
+    await Book.findByIdAndDelete(req.params.id);
+
+    // Solo intenta eliminar de Elasticsearch si está disponible
+    if (await isElasticSearchAvailable()) {
+      try {
+        const response = await elasticsearchClient.delete({
+          index: "books",
+          id: req.params.id.toString(),
+        });
+
+        // Loguea si no se pudo eliminar el documento correctamente
+        if (response.body && response.body.result !== "deleted") {
+          console.log("Error al eliminar el documento en Elasticsearch:", response.body);
+        }
+      } catch (error) {
+        console.error("Error al eliminar en Elasticsearch:", error);
+      }
+    }
+
     await Book.deleteOne({ _id: res.book._id });
     if (req.redisClient) {
       await req.redisClient.del(`book:${req.params.id}`);
@@ -352,7 +402,6 @@ router.get("/top-selling", async (req, res) => {
   }
 });
 
-// GET busqueda
 router.get("/search", async (req, res) => {
   try {
     const { query } = req.query;
@@ -369,23 +418,51 @@ router.get("/search", async (req, res) => {
       });
     }
 
-    // Creamos un array de palabras de búsqueda
-    const searchWords = query.split(" ").filter((word) => word.length > 0);
+    let books;
+    let total;
 
-    // Creamos una expresión regular para cada palabra
-    const regexPatterns = searchWords.map((word) => new RegExp(word, "i"));
+    // Verificar si Elasticsearch está disponible
+    if (await isElasticSearchAvailable()) {
+      console.log("Usando Elasticsearch para la búsqueda"); // Agregar un log para saber que Elasticsearch está siendo usado
 
-    // Buscamos libros que contengan cualquiera de las palabras en su descripción
-    const books = await Book.find({ summary: { $in: regexPatterns } })
-      .populate("author", "name")
-      .skip(skip)
-      .limit(limit)
-      .exec();
+      const response = await elasticsearchClient.search({
+        index: "books",
+        body: {
+          query: {
+            multi_match: {
+              query: query,
+              fields: ["name", "summary"],
+            },
+          },
+        },
+        from: skip,
+        size: limit,
+      });
 
-    // Contamos el total de resultados para la paginación
-    const total = await Book.countDocuments({
-      summary: { $in: regexPatterns },
-    });
+      // Verifica la estructura de la respuesta
+      if (response.body && response.body.hits) {
+        books = response.body.hits.hits.map(hit => hit._source);
+        total = response.body.hits.total.value;
+      } else {
+        books = [];
+        total = 0;
+      }
+    } else {
+      console.log("Usando MongoDB para la búsqueda"); // Agregar un log para saber que MongoDB está siendo usado
+
+      const searchWords = query.split(" ").filter((word) => word.length > 0);
+      const regexPatterns = searchWords.map((word) => new RegExp(word, "i"));
+
+      books = await Book.find({ summary: { $in: regexPatterns } })
+        .populate("author", "name")
+        .skip(skip)
+        .limit(limit)
+        .exec();
+
+      total = await Book.countDocuments({
+        summary: { $in: regexPatterns },
+      });
+    }
 
     const totalPages = Math.ceil(total / limit);
 
@@ -406,7 +483,6 @@ router.get("/:id/edit", getBook, async (req, res) => {
   const authors = await Author.find();
   res.render("books/edit", { book: res.book, authors: authors });
 });
-
 
 // Middleware function to get book by ID
 async function getBook(req, res, next) {
