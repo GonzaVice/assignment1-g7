@@ -18,7 +18,7 @@ git clone https://github.com/GonzaVice/assignment1-g7.git
 ### 3. Install express, mongoose, dotenv, ejs, method-override, faker-js y multer
 
 ```
-npm i express mongoose dotenv ejs method-override @faker-js/faker
+npm i express mongoose dotenv ejs method-override @faker-js/faker multer
 ```
 
 ### 4. Create .env file for MongoDB credentials
@@ -68,4 +68,4 @@ Run containers:
 docker-compose up
 ```
 
-### 3. Access the web app with [localhost:3000](http://localhost:3000/)
+### 3. Access the web app with [app.localhost](http://app.localhost/)
