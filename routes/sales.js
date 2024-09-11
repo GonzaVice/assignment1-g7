@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Sale = require("../models/Sale");
 const Book = require("../models/Book");
+const { isElasticSearchAvailable, elasticsearchClient } = require("../app");
 
 // GET all sales
 router.get("/", async (req, res) => {
@@ -29,6 +30,19 @@ router.post("/", async (req, res) => {
 
   try {
     const newSale = await sale.save();
+
+    if (await isElasticSearchAvailable()) {
+      await elasticsearchClient.index({
+        index: 'sales',
+        id: newSale._id.toString(),
+        body: {
+          book: newSale.book,
+          year: newSale.year,
+          sales: newSale.sales
+        },
+      });
+    }
+
     res.redirect(`/sales/${newSale._id}`);
   } catch (err) {
     const books = await Book.find();
@@ -61,6 +75,21 @@ router.put("/:id", async (req, res) => {
 
   try {
     await Sale.updateOne({ _id: req.params.id }, updates);
+
+    if (await isElasticSearchAvailable()) {
+      await elasticsearchClient.update({
+        index: 'sales',
+        id: req.params.id,
+        body: {
+          doc: {
+            book: updates.book,
+            year: updates.year,
+            sales: updates.sales
+          }
+        }
+      });
+    }
+
     res.redirect(`/sales/${req.params.id}`);
   } catch (err) {
     const books = await Book.find();
@@ -76,9 +105,17 @@ router.put("/:id", async (req, res) => {
 router.delete("/:id", getSale, async (req, res) => {
   try {
     await Sale.deleteOne({ _id: res.sale._id });
+
+    if (await isElasticSearchAvailable()) {
+      await elasticsearchClient.delete({
+        index: 'sales',
+        id: res.sale._id.toString(),
+      });
+    }
+
     res.redirect("/sales");
   } catch (err) {
-    console.error(err);
+    console.error("Error deleting the sale:", err);
     res.status(500).render("error", { message: "Error deleting the sale" });
   }
 });

@@ -4,6 +4,7 @@ const Author = require("../models/Author");
 const Book = require("../models/Book");
 const Review = require("../models/Review");
 const Sale = require("../models/Sale");
+const { isElasticSearchAvailable, elasticsearchClient } = require("../app");
 
 // GET all authors
 router.get("/", async (req, res) => {
@@ -68,8 +69,24 @@ router.post("/", async (req, res) => {
 
   try {
     const newAuthor = await author.save();
+
+    // Verificar si Elasticsearch está disponible y luego indexar el nuevo autor
+    if (await isElasticSearchAvailable()) {
+      await elasticsearchClient.index({
+        index: "authors",
+        id: newAuthor._id.toString(),
+        body: {
+          name: newAuthor.name,
+          dateOfBirth: newAuthor.dateOfBirth,
+          countryOfOrigin: newAuthor.countryOfOrigin,
+          description: newAuthor.description
+        },
+      });
+    }
+
     res.redirect(`/authors/${newAuthor._id}`);
   } catch (err) {
+    console.error("Error saving the author:", err);
     res.render("authors/new", { author: author, errorMessage: err.message });
   }
 });
@@ -95,8 +112,26 @@ router.put("/:id", async (req, res) => {
 
   try {
     await Author.updateOne({ _id: req.params.id }, updates);
+
+    // Verificar si Elasticsearch está disponible y luego actualizar el autor en Elasticsearch
+    if (await isElasticSearchAvailable()) {
+      await elasticsearchClient.update({
+        index: 'authors',
+        id: req.params.id,
+        body: {
+          doc: {
+            name: updates.name,
+            dateOfBirth: updates.dateOfBirth,
+            countryOfOrigin: updates.countryOfOrigin,
+            description: updates.description
+          }
+        }
+      });
+    }
+
     res.redirect(`/authors/${req.params.id}`);
   } catch (err) {
+    console.error("Error updating the author:", err);
     res.render("authors/edit", {
       author: { _id: req.params.id, ...updates },
       errorMessage: err.message,
@@ -108,12 +143,26 @@ router.put("/:id", async (req, res) => {
 router.delete("/:id", getAuthor, async (req, res) => {
   try {
     await Author.deleteOne({ _id: res.author._id });
+
+    // Verificar si Elasticsearch está disponible y luego eliminar el autor de Elasticsearch
+    if (await isElasticSearchAvailable()) {
+      try {
+        await elasticsearchClient.delete({
+          index: "authors",
+          id: res.author._id.toString(),
+        });
+      } catch (esError) {
+        console.error("Error deleting the author from Elasticsearch:", esError);
+      }
+    }
+
     res.redirect("/authors");
   } catch (err) {
-    console.error(err);
+    console.error("Error deleting the author from MongoDB:", err);
     res.status(500).render("error", { message: "Error deleting the author" });
   }
 });
+
 
 // Middleware function to get author by ID
 async function getAuthor(req, res, next) {

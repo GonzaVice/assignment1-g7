@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Review = require("../models/Review");
 const Book = require("../models/Book");
+const { isElasticSearchAvailable, elasticsearchClient } = require("../app");
 
 // GET all reviews
 router.get("/", async (req, res) => {
@@ -30,6 +31,20 @@ router.post("/", async (req, res) => {
 
   try {
     const newReview = await review.save();
+    
+    if (await isElasticSearchAvailable()) {
+      await elasticsearchClient.index({
+        index: 'reviews',
+        id: newReview._id.toString(),
+        body: {
+          book: newReview.book,
+          review: newReview.review,
+          score: newReview.score,
+          numberOfUpvotes: newReview.numberOfUpvotes
+        },
+      });
+    }
+
     res.redirect(`/reviews/${newReview._id}`);
   } catch (err) {
     const books = await Book.find();
@@ -62,6 +77,21 @@ router.put("/:id", async (req, res) => {
 
   try {
     await Review.updateOne({ _id: req.params.id }, updates);
+
+    if (await isElasticSearchAvailable()) {
+      await elasticsearchClient.update({
+        index: 'reviews',
+        id: req.params.id,
+        body: {
+          doc: {
+            book: updates.book,
+            review: updates.review,
+            score: updates.score
+          }
+        }
+      });
+    }
+
     res.redirect(`/reviews/${req.params.id}`);
   } catch (err) {
     const books = await Book.find();
@@ -78,8 +108,23 @@ router.post("/:id/upvote", getReview, async (req, res) => {
   try {
     res.review.numberOfUpvotes += 1;
     await res.review.save();
+
+    // Verificar si Elasticsearch está disponible y luego actualizar el contador de upvotes en Elasticsearch
+    if (await isElasticSearchAvailable()) {
+      await elasticsearchClient.update({
+        index: 'reviews',
+        id: res.review._id.toString(),
+        body: {
+          doc: {
+            numberOfUpvotes: res.review.numberOfUpvotes
+          }
+        }
+      });
+    }
+
     res.redirect(`/reviews/${res.review._id}`);
   } catch (err) {
+    console.error("Error upvoting the review:", err);
     res.status(500).render("error", { message: "Error upvoting the review" });
   }
 });
@@ -88,9 +133,17 @@ router.post("/:id/upvote", getReview, async (req, res) => {
 router.delete("/:id", getReview, async (req, res) => {
   try {
     await Review.deleteOne({ _id: res.review._id });
+
+    if (await isElasticSearchAvailable()) {
+      await elasticsearchClient.delete({
+        index: 'reviews',
+        id: res.review._id.toString(),
+      });
+    }
+
     res.redirect("/reviews");
   } catch (err) {
-    console.error(err);
+    console.error("Error deleting the review:", err);
     res.status(500).render("error", { message: "Error deleting the review" });
   }
 });

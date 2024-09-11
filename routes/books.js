@@ -169,7 +169,6 @@ router.get("/top-selling", async (req, res) => {
   }
 });
 
-// GET búsqueda
 router.get("/search", async (req, res) => {
   try {
     const { query } = req.query;
@@ -191,6 +190,8 @@ router.get("/search", async (req, res) => {
 
     // Verificar si Elasticsearch está disponible
     if (await isElasticSearchAvailable()) {
+      console.log("Usando Elasticsearch para la búsqueda"); // Agregar un log para saber que Elasticsearch está siendo usado
+
       const response = await elasticsearchClient.search({
         index: "books",
         body: {
@@ -214,6 +215,8 @@ router.get("/search", async (req, res) => {
         total = 0;
       }
     } else {
+      console.log("Usando MongoDB para la búsqueda"); // Agregar un log para saber que MongoDB está siendo usado
+
       const searchWords = query.split(" ").filter((word) => word.length > 0);
       const regexPatterns = searchWords.map((word) => new RegExp(word, "i"));
 
@@ -254,7 +257,6 @@ router.post("/", async (req, res) => {
   try {
     const newBook = await book.save();
     if (await isElasticSearchAvailable()) {
-      console.log("Funciona elastic")
       await elasticsearchClient.index({
         index: "books",
         id: newBook._id.toString(),
@@ -330,6 +332,7 @@ router.delete("/:id", async (req, res) => {
   try {
     await Book.findByIdAndDelete(req.params.id);
 
+    // Solo intenta eliminar de Elasticsearch si está disponible
     if (await isElasticSearchAvailable()) {
       try {
         const response = await elasticsearchClient.delete({
@@ -337,13 +340,12 @@ router.delete("/:id", async (req, res) => {
           id: req.params.id.toString(),
         });
 
+        // Loguea si no se pudo eliminar el documento correctamente
         if (response.body && response.body.result !== "deleted") {
           console.log("Error al eliminar el documento en Elasticsearch:", response.body);
-          return res.status(500).render("error", { message: "Error deleting the document in Elasticsearch" });
-        } 
-        } catch (error) {
+        }
+      } catch (error) {
         console.error("Error al eliminar en Elasticsearch:", error);
-        return res.status(500).render("error", { message: "Error deleting the book in Elasticsearch" });
       }
     }
 
