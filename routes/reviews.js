@@ -103,7 +103,7 @@ router.get("/:id", getReview, async (req, res) => {
 
     if (req.redisClient) {
       // Guarda la review en cache
-      await req.redisClient.set(cacheKey, JSON.stringify(book), {
+      await req.redisClient.set(cacheKey, JSON.stringify(review), {
         EX: 3600
       })
     }
