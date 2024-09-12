@@ -85,6 +85,153 @@ router.get("/", async (req, res) => {
   }
 });
 
+// GET top 10 rated books
+router.get("/top-rated", async (req, res) => {
+  try {
+    const topBooks = await Book.aggregate([
+      {
+        $lookup: {
+          from: "reviews",
+          localField: "_id",
+          foreignField: "book",
+          as: "reviews",
+        },
+      },
+      {
+        $addFields: {
+          averageScore: { $avg: "$reviews.score" },
+          reviewCount: { $size: "$reviews" },
+        },
+      },
+      {
+        $sort: { averageScore: -1, reviewCount: -1 },
+      },
+      {
+        $limit: 10,
+      },
+      {
+        $lookup: {
+          from: "authors",
+          localField: "author",
+          foreignField: "_id",
+          as: "author",
+        },
+      },
+      {
+        $unwind: "$author",
+      },
+      {
+        $project: {
+          name: 1,
+          author: 1,
+          averageScore: 1,
+          reviews: {
+            review: 1,
+            score: 1,
+            numberOfUpvotes: 1,
+          },
+        },
+      },
+    ]);
+
+    for (let book of topBooks) {
+      // Obtener la reseña más popular con la puntuación más alta
+      book.highestRatedReview = await Review.findOne({ book: book._id })
+        .sort({ score: -1, numberOfUpvotes: -1 })
+        .limit(1);
+
+      // Obtener la reseña más popular con la puntuación más baja
+      book.lowestRatedReview = await Review.findOne({ book: book._id })
+        .sort({ score: 1, numberOfUpvotes: -1 })
+        .limit(1);
+    }
+
+    res.render("books/top-rated", { topBooks });
+  } catch (err) {
+    res.status(500).render("error", { message: err.message });
+  }
+});
+
+// GET top 50 selling books
+router.get("/top-selling", async (req, res) => {
+  try {
+    const topBooks = await Book.aggregate([
+      {
+        $lookup: {
+          from: "sales",
+          localField: "_id",
+          foreignField: "book",
+          as: "sales",
+        },
+      },
+      {
+        $addFields: {
+          totalSales: { $sum: "$sales.sales" },
+        },
+      },
+      {
+        $sort: { totalSales: -1 },
+      },
+      {
+        $limit: 50,
+      },
+      {
+        $lookup: {
+          from: "authors",
+          localField: "author",
+          foreignField: "_id",
+          as: "author",
+        },
+      },
+      {
+        $unwind: "$author",
+      },
+    ]);
+
+    for (let book of topBooks) {
+      // Calcular ventas totales del autor
+      const authorSales = await Book.aggregate([
+        { $match: { author: book.author._id } },
+        {
+          $lookup: {
+            from: "sales",
+            localField: "_id",
+            foreignField: "book",
+            as: "sales",
+          },
+        },
+        {
+          $unwind: "$sales",
+        },
+        {
+          $group: {
+            _id: "$author",
+            totalSales: { $sum: "$sales.sales" },
+          },
+        },
+      ]);
+      book.authorTotalSales = authorSales[0] ? authorSales[0].totalSales : 0;
+
+      // Verificar si el libro estuvo en el top 5 de ventas el año de su publicación
+      const publicationYear = book.publicationDate.getFullYear();
+      const topSellingBooksOfYear = await Sale.aggregate([
+        { $match: { year: publicationYear } },
+        { $group: { _id: "$book", totalSales: { $sum: "$sales" } } },
+        { $sort: { totalSales: -1 } },
+        { $limit: 5 },
+      ]);
+
+      book.inTopFiveOnPublicationYear = topSellingBooksOfYear.some((topBook) =>
+        topBook._id.equals(book._id)
+      );
+    }
+
+    res.render("books/top-selling", { topBooks });
+  } catch (err) {
+    res.status(500).render("error", { message: err.message });
+  }
+});
+
 // GET one book
 router.get("/:id", getBook, async (req, res) => {
   try {
@@ -254,153 +401,6 @@ async function getBook(req, res, next) {
   res.book = book;
   next();
 }
-
-// GET top 10 rated books
-router.get("/top-rated", async (req, res) => {
-  try {
-    const topBooks = await Book.aggregate([
-      {
-        $lookup: {
-          from: "reviews",
-          localField: "_id",
-          foreignField: "book",
-          as: "reviews",
-        },
-      },
-      {
-        $addFields: {
-          averageScore: { $avg: "$reviews.score" },
-          reviewCount: { $size: "$reviews" },
-        },
-      },
-      {
-        $sort: { averageScore: -1, reviewCount: -1 },
-      },
-      {
-        $limit: 10,
-      },
-      {
-        $lookup: {
-          from: "authors",
-          localField: "author",
-          foreignField: "_id",
-          as: "author",
-        },
-      },
-      {
-        $unwind: "$author",
-      },
-      {
-        $project: {
-          name: 1,
-          author: 1,
-          averageScore: 1,
-          reviews: {
-            review: 1,
-            score: 1,
-            numberOfUpvotes: 1,
-          },
-        },
-      },
-    ]);
-
-    for (let book of topBooks) {
-      // Obtener la reseña más popular con la puntuación más alta
-      book.highestRatedReview = await Review.findOne({ book: book._id })
-        .sort({ score: -1, numberOfUpvotes: -1 })
-        .limit(1);
-
-      // Obtener la reseña más popular con la puntuación más baja
-      book.lowestRatedReview = await Review.findOne({ book: book._id })
-        .sort({ score: 1, numberOfUpvotes: -1 })
-        .limit(1);
-    }
-
-    res.render("books/top-rated", { topBooks });
-  } catch (err) {
-    res.status(500).render("error", { message: err.message });
-  }
-});
-
-// GET top 50 selling books
-router.get("/top-selling", async (req, res) => {
-  try {
-    const topBooks = await Book.aggregate([
-      {
-        $lookup: {
-          from: "sales",
-          localField: "_id",
-          foreignField: "book",
-          as: "sales",
-        },
-      },
-      {
-        $addFields: {
-          totalSales: { $sum: "$sales.sales" },
-        },
-      },
-      {
-        $sort: { totalSales: -1 },
-      },
-      {
-        $limit: 50,
-      },
-      {
-        $lookup: {
-          from: "authors",
-          localField: "author",
-          foreignField: "_id",
-          as: "author",
-        },
-      },
-      {
-        $unwind: "$author",
-      },
-    ]);
-
-    for (let book of topBooks) {
-      // Calcular ventas totales del autor
-      const authorSales = await Book.aggregate([
-        { $match: { author: book.author._id } },
-        {
-          $lookup: {
-            from: "sales",
-            localField: "_id",
-            foreignField: "book",
-            as: "sales",
-          },
-        },
-        {
-          $unwind: "$sales",
-        },
-        {
-          $group: {
-            _id: "$author",
-            totalSales: { $sum: "$sales.sales" },
-          },
-        },
-      ]);
-      book.authorTotalSales = authorSales[0] ? authorSales[0].totalSales : 0;
-
-      // Verificar si el libro estuvo en el top 5 de ventas el año de su publicación
-      const publicationYear = book.publicationDate.getFullYear();
-      const topSellingBooksOfYear = await Sale.aggregate([
-        { $match: { year: publicationYear } },
-        { $group: { _id: "$book", totalSales: { $sum: "$sales" } } },
-        { $sort: { totalSales: -1 } },
-        { $limit: 5 },
-      ]);
-
-      book.inTopFiveOnPublicationYear = topSellingBooksOfYear.some((topBook) =>
-        topBook._id.equals(book._id)
-      );
-    }
-
-    res.render("books/top-selling", { topBooks });
-  } catch (err) {
-    res.status(500).render("error", { message: err.message });
-  }
-});
 
 router.get("/search", async (req, res) => {
   try {
